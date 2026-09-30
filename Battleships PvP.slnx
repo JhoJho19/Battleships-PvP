@@ -48,6 +48,7 @@
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
+  <Project Path="Battleships.Protocol.csproj" />
   <Project Path="Unity.Pipeline.Attributes.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="Battleships.Configuration.csproj" />
@@ -57,4 +58,5 @@
   <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
   <Project Path="Unity.Pipeline.CodeGen.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
+  <Project Path="Battleships.Protocol.Tests.csproj" />
 </Solution>

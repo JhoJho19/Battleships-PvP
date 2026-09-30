@@ -1,0 +1,7 @@
+{
+    "name": "Battleships.Protocol.Tests",
+    "rootNamespace": "Battleships.Tests.Protocol",
+    "references": ["Battleships.Protocol"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}
