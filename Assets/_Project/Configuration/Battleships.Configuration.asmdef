@@ -1,0 +1,6 @@
+{
+    "name": "Battleships.Configuration",
+    "rootNamespace": "Battleships.Configuration",
+    "references": ["Battleships.Domain"],
+    "autoReferenced": false
+}

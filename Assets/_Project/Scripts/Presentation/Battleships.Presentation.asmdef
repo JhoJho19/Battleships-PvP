@@ -1,0 +1,6 @@
+{
+    "name": "Battleships.Presentation",
+    "rootNamespace": "Battleships.Presentation",
+    "references": ["Battleships.Client", "Battleships.Configuration"],
+    "autoReferenced": false
+}

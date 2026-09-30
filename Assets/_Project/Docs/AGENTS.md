@@ -36,7 +36,7 @@ Rules:
 6. Prefer small, verifiable changes.
 7. Update the relevant documentation when behavior changes.
 8. Do not change the public protocol, snapshot format, or idempotency semantics without checking all dependent tests.
-9. Do not use Singlton.
+9. Do not use Singleton.
 
 ## 4. Architecture invariants
 

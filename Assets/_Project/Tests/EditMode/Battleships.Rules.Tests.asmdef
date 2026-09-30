@@ -1,0 +1,7 @@
+{
+    "name": "Battleships.Rules.Tests",
+    "rootNamespace": "Battleships.Tests",
+    "references": ["Battleships.Domain", "Battleships.Configuration"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}

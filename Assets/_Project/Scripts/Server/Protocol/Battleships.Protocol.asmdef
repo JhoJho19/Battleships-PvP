@@ -1,0 +1,6 @@
+{
+    "name": "Battleships.Protocol",
+    "rootNamespace": "Battleships.Protocol",
+    "autoReferenced": false,
+    "noEngineReferences": true
+}
