@@ -49,6 +49,14 @@ namespace Battleships.Domain
             return new MatchState(FleetPlacement.Create(config, random), FleetPlacement.Create(config, random));
         }
 
+        public static bool ExpireTurn(MatchState match)
+        {
+            if (match == null) throw new ArgumentNullException(nameof(match));
+            if (match.Winner.HasValue) return false;
+            match.CurrentPlayer = Opponent(match.CurrentPlayer);
+            return true;
+        }
+
         public static ShotOutcome Fire(MatchState match, PlayerId player, Position position)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));

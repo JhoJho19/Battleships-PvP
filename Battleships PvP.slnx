@@ -48,9 +48,11 @@
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
+  <Project Path="Battleships.Server.csproj" />
   <Project Path="Battleships.Protocol.csproj" />
   <Project Path="Unity.Pipeline.Attributes.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
+  <Project Path="Battleships.Server.Tests.csproj" />
   <Project Path="Battleships.Configuration.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
