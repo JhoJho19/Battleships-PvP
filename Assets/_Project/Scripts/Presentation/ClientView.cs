@@ -51,8 +51,7 @@ namespace Battleships.Presentation
                 return;
             }
 
-            var remaining = Math.Max(0,
-                state.TurnDeadlineUnixTimeMilliseconds - unixTimeMilliseconds);
+            var remaining = state.GetRemainingTurnMilliseconds(unixTimeMilliseconds);
             var seconds = (int)Math.Ceiling(remaining / 1000d);
             timer.text = $"{seconds / 60:00} : {seconds % 60:00}";
         }

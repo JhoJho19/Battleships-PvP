@@ -11,4 +11,7 @@
 детерминированные сетевые сбои, очередь, logging, lifecycle и адаптер к существующему API сервера.
 
 Два независимых клиента и привязка подготовленного UI этапа 4.6 описаны в `CLIENT_RUNTIME.md`.
-Heartbeat scheduling, server-side timeout processing и reconnect остаются следующими этапами `PLAN.md`.
+Этап 4.7 использует единый authoritative timeout-переход в `MatchService`, отменяемый серверный
+UniTask loop и рассылку персональных snapshot только после фактической смены состояния. Клиентский
+таймер остаётся только отображением абсолютного server deadline. Heartbeat scheduling и reconnect
+остаются следующими этапами `PLAN.md`.

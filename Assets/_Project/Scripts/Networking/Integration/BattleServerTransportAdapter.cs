@@ -22,6 +22,13 @@ namespace Battleships.Networking.Integration
             this.sender = sender ?? throw new ArgumentNullException(nameof(sender));
         }
 
+        public bool ProcessDeadlines()
+        {
+            if (!server.ProcessDeadlines()) return false;
+            BroadcastSnapshots();
+            return true;
+        }
+
         public void Receive(TransportDelivery delivery)
         {
             if (delivery == null) throw new ArgumentNullException(nameof(delivery));
@@ -71,9 +78,9 @@ namespace Battleships.Networking.Integration
 
         private void HandleFire(EndpointIdentity endpoint, FireRequest request)
         {
-            var response = server.Handle(request);
-            sender.Send(endpoint, response);
-            if (response.Accepted) BroadcastSnapshots();
+            var result = server.HandleWithStateChange(request);
+            sender.Send(endpoint, result.Response);
+            if (result.StateChanged) BroadcastSnapshots();
         }
 
         private void BroadcastSnapshots()

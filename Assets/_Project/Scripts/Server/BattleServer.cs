@@ -56,16 +56,19 @@ namespace Battleships.Server
             return ServerResult<MatchSnapshot>.Success(snapshots.Build(match, session.Player));
         }
 
-        public FireResponse Handle(FireRequest request)
+        public FireResponse Handle(FireRequest request) => HandleWithStateChange(request).Response;
+
+        public FireHandlingResult HandleWithStateChange(FireRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.RequestId))
-                return Reject(request, ProtocolErrorCode.InvalidRequest);
+                return new FireHandlingResult(Reject(request, ProtocolErrorCode.InvalidRequest), false);
             if (!sessions.TryResolve(request.SessionToken, out var session))
-                return Reject(request, ProtocolErrorCode.InvalidSession);
-            if (requests.TryGet(session.Token, request.RequestId, out var cached)) return cached;
-            var response = matches.Fire(session, request);
+                return new FireHandlingResult(Reject(request, ProtocolErrorCode.InvalidSession), false);
+            if (requests.TryGet(session.Token, request.RequestId, out var cached))
+                return new FireHandlingResult(cached, false);
+            var response = matches.Fire(session, request, out var stateChanged);
             requests.Store(session.Token, response);
-            return response;
+            return new FireHandlingResult(response, stateChanged);
         }
 
         public ServerResult<HeartbeatResponse> Handle(HeartbeatRequest request)
@@ -88,5 +91,17 @@ namespace Battleships.Server
             Target = request?.Target == null ? null :
                 new BoardPosition { X = request.Target.X, Y = request.Target.Y }
         };
+    }
+
+    public readonly struct FireHandlingResult
+    {
+        public FireResponse Response { get; }
+        public bool StateChanged { get; }
+
+        internal FireHandlingResult(FireResponse response, bool stateChanged)
+        {
+            Response = response ?? throw new ArgumentNullException(nameof(response));
+            StateChanged = stateChanged;
+        }
     }
 }

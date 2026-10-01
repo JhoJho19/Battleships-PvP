@@ -1,4 +1,4 @@
-# PLAN.md §4.4 — Server Application Layer
+# PLAN.md §4.4 and §4.7 — Server Application Layer and Turn Timer
 
 ## Responsibilities and API
 
@@ -7,6 +7,7 @@
 - `ServerResult<JoinResponse> Handle(JoinRequest)`
 - `ServerResult<MatchSnapshot> Handle(ResumeRequest)`
 - `FireResponse Handle(FireRequest)`
+- `FireHandlingResult HandleWithStateChange(FireRequest)` for the transport adapter
 - `ServerResult<HeartbeatResponse> Handle(HeartbeatRequest)`
 - `bool ProcessDeadlines()`
 
@@ -55,14 +56,23 @@ The match starts at `StateVersion = 1`, `TurnId = 1`, deadline = server time + t
 
 `IServerClock.UnixTimeMilliseconds` is injected. `SystemServerClock` uses a UTC origin and a
 monotonic Stopwatch; deterministic tests use a manually advanced clock. Duration must be positive.
-Deadline checks use `now >= deadline`. An expired Fire request is rejected without advancing time
-state. Only an explicit `ProcessDeadlines()` processes expiration. Its bool reports an actual state
-change; it does nothing before readiness, before the deadline, or after a win.
+Deadline checks use `now >= deadline`. `MatchService` has one timeout-transition mechanism shared by
+`ProcessDeadlines()` and new Fire request processing. A new request first brings the authoritative
+turn up to date, then performs turn/player/shot validation. A request for the turn that expired at
+that boundary returns `TurnExpired`; the board is not mutated. `ProcessDeadlines()` reports whether
+an actual transition occurred and does nothing before readiness, before the deadline, or after a win.
 
-Each call processes at most the current expired turn and creates a fresh deadline from the current
-server time. A late invocation does not retroactively synthesize turns; repeated calls at that time
-do nothing until the new deadline. The future runtime must call deadline processing; scheduling,
-Unity frame loops and reconnect/liveness detection are outside this stage.
+`RequestCache` lookup still happens before this processing. A duplicate request returns its original
+cached response and cannot advance an expired turn. `FireHandlingResult.StateChanged` lets the
+transport adapter distinguish a real shot/timeout transition from a cached or rejected operation.
+
+Each call processes at most the current expired turn and creates a fresh 15-second deadline from the
+current server time. A late invocation does not retroactively synthesize turns; repeated calls at
+that time do nothing until the new deadline.
+
+In stage 4.7 the runtime calls the adapter's deadline processing from a cancellable UniTask loop.
+The adapter broadcasts personalized snapshots only when a real authoritative transition occurred.
+This loop is independent of client requests and client connection state.
 
 ## Snapshot safety
 
@@ -81,6 +91,7 @@ Focused Domain tests cover ExpireTurn, including a completed match and null inpu
 Existing game-rule tests are reused. No Play Mode, transport, client, UI or later stage is added.
 
 Verified in Unity 6000.3.10f1 on 2026-10-01: compilation completed with no Console errors,
-server EditMode assembly passed 25/25 tests, and the full EditMode suite passed 47/47 tests.
-Unity CLI found no Pipeline-connected editor, so verification used the existing Unity MCP
-connection. No packages were installed and Play Mode was not entered.
+the affected Server/Networking/Client EditMode assemblies passed 54/54 tests, and the full EditMode
+suite passed 77/77 tests. A short Play Mode integration check observed autonomous turn/version
+changes without gameplay requests and matching authoritative state on both clients. No packages were
+installed.

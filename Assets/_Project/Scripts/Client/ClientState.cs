@@ -79,6 +79,13 @@ namespace Battleships.Client
         public bool IsYourTurn => HasIdentity && MatchStatus == ClientMatchStatus.InProgress &&
                                   CurrentPlayer == PlayerSlot;
 
+        public long GetRemainingTurnMilliseconds(long nowUnixMilliseconds)
+        {
+            if (MatchStatus != ClientMatchStatus.InProgress || TurnDeadlineUnixTimeMilliseconds <= 0)
+                return 0;
+            return Math.Max(0, TurnDeadlineUnixTimeMilliseconds - nowUnixMilliseconds);
+        }
+
         internal bool ApplyJoin(JoinResponse response)
         {
             if (response == null || string.IsNullOrWhiteSpace(response.SessionToken)) return false;

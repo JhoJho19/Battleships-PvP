@@ -173,6 +173,19 @@ namespace Battleships.Tests.Client
             Assert.That(client.State.OpponentShots[new ClientPosition(3, 4)], Is.EqualTo(ShotResultCode.Miss));
         }
 
+        [Test]
+        public void RemainingTimeUsesProvidedTimeAndClampsToZeroWithoutChangingTurnState()
+        {
+            var turnId = client.State.TurnId;
+            var currentPlayer = client.State.CurrentPlayer;
+
+            Assert.That(client.State.GetRemainingTurnMilliseconds(15000), Is.EqualTo(5000));
+            Assert.That(client.State.GetRemainingTurnMilliseconds(20000), Is.Zero);
+            Assert.That(client.State.GetRemainingTurnMilliseconds(25000), Is.Zero);
+            Assert.That(client.State.TurnId, Is.EqualTo(turnId));
+            Assert.That(client.State.CurrentPlayer, Is.EqualTo(currentPlayer));
+        }
+
         private void Deliver(object message)
         {
             transport.Send(endpoint.Identity, message);

@@ -241,13 +241,40 @@ namespace Battleships.Tests.Server
         }
 
         [Test]
-        public void DeadlineBoundaryRejectsFireWithoutAutomaticallyProcessingTimeout()
+        public void DeadlineBoundaryRejectsFireAndProcessesTimeoutExactlyOnce()
         {
             var before = Snapshot(one);
             clock.UnixTimeMilliseconds = before.TurnDeadlineUnixTimeMilliseconds;
-            Assert.That(server.Handle(Fire(one, before, 0, 0)).ErrorCode,
-                Is.EqualTo(ProtocolErrorCode.TurnExpired));
-            AssertUnchanged(before, Snapshot(one));
+            var result = server.HandleWithStateChange(Fire(one, before, 0, 0));
+            Assert.That(result.Response.ErrorCode, Is.EqualTo(ProtocolErrorCode.TurnExpired));
+            Assert.That(result.StateChanged, Is.True);
+
+            var after = Snapshot(one);
+            Assert.That(after.StateVersion, Is.EqualTo(before.StateVersion + 1));
+            Assert.That(after.TurnId, Is.EqualTo(before.TurnId + 1));
+            Assert.That(after.CurrentPlayer, Is.EqualTo(PlayerSlot.PlayerTwo));
+            Assert.That(after.TurnDeadlineUnixTimeMilliseconds,
+                Is.EqualTo(clock.UnixTimeMilliseconds + 15000));
+            CollectionAssert.AreEqual(before.OwnBoardCells.Select(CellKey), after.OwnBoardCells.Select(CellKey));
+            CollectionAssert.AreEqual(before.OpponentShots.Select(ShotKey), after.OpponentShots.Select(ShotKey));
+            Assert.That(server.ProcessDeadlines(), Is.False);
+        }
+
+        [Test]
+        public void CachedFireIsReturnedBeforeDeadlineProcessing()
+        {
+            var request = Fire(one, Snapshot(one), 0, 0, "cached-before-timeout");
+            var original = server.HandleWithStateChange(request);
+            Assert.That(original.Response.Accepted, Is.True);
+            Assert.That(original.StateChanged, Is.True);
+
+            var beforeRetry = Snapshot(one);
+            clock.UnixTimeMilliseconds = beforeRetry.TurnDeadlineUnixTimeMilliseconds;
+            var duplicate = server.HandleWithStateChange(request);
+
+            Assert.That(duplicate.StateChanged, Is.False);
+            Assert.That(duplicate.Response.StateVersion, Is.EqualTo(original.Response.StateVersion));
+            AssertUnchanged(beforeRetry, Snapshot(one));
         }
 
         [Test]

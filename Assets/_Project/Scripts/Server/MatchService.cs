@@ -49,20 +49,24 @@ namespace Battleships.Server
         internal AuthoritativeMatch Resolve(PlayerSession session) =>
             match != null && session.MatchId == matchId ? match : null;
 
-        internal FireResponse Fire(PlayerSession session, FireRequest request)
+        internal FireResponse Fire(PlayerSession session, FireRequest request, out bool stateChanged)
         {
             var current = Resolve(session);
             var error = ProtocolErrorCode.None;
             ShotOutcome outcome = default;
+            stateChanged = false;
             if (current == null) error = ProtocolErrorCode.MatchNotReady;
-            else if (request.Target == null) error = ProtocolErrorCode.InvalidRequest;
             else if (current.State.Winner.HasValue) error = ProtocolErrorCode.MatchFinished;
-            else if (request.TurnId != current.TurnId) error = ProtocolErrorCode.StaleTurn;
-            else if (session.Player != current.State.CurrentPlayer) error = ProtocolErrorCode.NotYourTurn;
             else
             {
                 var now = clock.UnixTimeMilliseconds;
-                if (now >= current.Deadline) error = ProtocolErrorCode.TurnExpired;
+                var expiredRequestedTurn = request.TurnId == current.TurnId &&
+                                           now >= current.Deadline;
+                stateChanged = AdvanceExpiredTurnIfNeeded(current, now);
+                if (expiredRequestedTurn) error = ProtocolErrorCode.TurnExpired;
+                else if (request.TurnId != current.TurnId) error = ProtocolErrorCode.StaleTurn;
+                else if (session.Player != current.State.CurrentPlayer) error = ProtocolErrorCode.NotYourTurn;
+                else if (request.Target == null) error = ProtocolErrorCode.InvalidRequest;
                 else
                 {
                     // Calculate before mutation so overflow cannot leave a partially updated turn.
@@ -72,6 +76,7 @@ namespace Battleships.Server
                     error = ToProtocol(outcome.Rejection);
                     if (outcome.Accepted)
                     {
+                        stateChanged = true;
                         current.StateVersion++;
                         if (!current.State.Winner.HasValue)
                         {
@@ -103,13 +108,17 @@ namespace Battleships.Server
         internal bool ProcessDeadlines()
         {
             if (match == null || match.State.Winner.HasValue) return false;
-            var now = clock.UnixTimeMilliseconds;
-            if (now < match.Deadline) return false;
+            return AdvanceExpiredTurnIfNeeded(match, clock.UnixTimeMilliseconds);
+        }
+
+        private bool AdvanceExpiredTurnIfNeeded(AuthoritativeMatch current, long now)
+        {
+            if (current.State.Winner.HasValue || now < current.Deadline) return false;
             var nextDeadline = NewDeadline(now);
-            if (!GameRules.ExpireTurn(match.State)) return false;
-            match.StateVersion++;
-            match.TurnId++;
-            match.Deadline = nextDeadline;
+            if (!GameRules.ExpireTurn(current.State)) return false;
+            current.StateVersion++;
+            current.TurnId++;
+            current.Deadline = nextDeadline;
             return true;
         }
 

@@ -352,6 +352,115 @@ namespace Battleships.Tests.Networking
                 Is.EqualTo(ProtocolErrorCode.InvalidSession));
         }
 
+        [Test]
+        public void DeadlineTickBroadcastsOnlyAfterAnAutonomousTimeout()
+        {
+            var clock = SetUpIntegratedServer(out var adapter);
+            var before = LatestSnapshot(clientA);
+            clientA.Deliveries.Clear();
+            clientB.Deliveries.Clear();
+
+            clock.UnixTimeMilliseconds = before.TurnDeadlineUnixTimeMilliseconds - 1;
+            Assert.That(adapter.ProcessDeadlines(), Is.False);
+            transport.ProcessPending();
+            Assert.That(clientA.Deliveries, Is.Empty);
+            Assert.That(clientB.Deliveries, Is.Empty);
+
+            clock.UnixTimeMilliseconds += 1;
+            Assert.That(adapter.ProcessDeadlines(), Is.True);
+            transport.ProcessPending();
+
+            var afterA = LatestSnapshot(clientA);
+            var afterB = LatestSnapshot(clientB);
+            Assert.That(afterA.PlayerSlot, Is.EqualTo(PlayerSlot.PlayerOne));
+            Assert.That(afterB.PlayerSlot, Is.EqualTo(PlayerSlot.PlayerTwo));
+            Assert.That(afterA.CurrentPlayer, Is.EqualTo(PlayerSlot.PlayerTwo));
+            Assert.That(afterB.TurnId, Is.EqualTo(before.TurnId + 1));
+            Assert.That(afterB.StateVersion, Is.EqualTo(before.StateVersion + 1));
+            Assert.That(afterB.TurnDeadlineUnixTimeMilliseconds,
+                Is.EqualTo(clock.UnixTimeMilliseconds + 15000));
+
+            clientA.Deliveries.Clear();
+            clientB.Deliveries.Clear();
+            Assert.That(adapter.ProcessDeadlines(), Is.False);
+            transport.ProcessPending();
+            Assert.That(clientA.Deliveries, Is.Empty);
+            Assert.That(clientB.Deliveries, Is.Empty);
+        }
+
+        [Test]
+        public void DisconnectedActiveClientDoesNotPauseTimeout()
+        {
+            var clock = SetUpIntegratedServer(out var adapter);
+            var before = LatestSnapshot(clientA);
+            clientA.Deliveries.Clear();
+            clientB.Deliveries.Clear();
+            endpointA.Configure(Settings(disconnected: true));
+
+            clock.UnixTimeMilliseconds = before.TurnDeadlineUnixTimeMilliseconds;
+            Assert.That(adapter.ProcessDeadlines(), Is.True);
+            transport.ProcessPending();
+
+            Assert.That(clientA.Deliveries, Is.Empty);
+            var connectedSnapshot = LatestSnapshot(clientB);
+            Assert.That(connectedSnapshot.CurrentPlayer, Is.EqualTo(PlayerSlot.PlayerTwo));
+            Assert.That(connectedSnapshot.TurnId, Is.EqualTo(before.TurnId + 1));
+            Assert.That(transport.Log.Any(x => x.Endpoint == endpointA.Identity &&
+                x.Status == TransportLogStatus.Dropped &&
+                x.DropReason == TransportDropReason.Disconnected), Is.True);
+        }
+
+        [Test]
+        public void FireAtDeadlineCannotCreateADoubleTurnTransition()
+        {
+            var clock = SetUpIntegratedServer(out var adapter);
+            var before = LatestSnapshot(clientA);
+            var join = (JoinResponse)clientA.Deliveries.Single(x => x.Message is JoinResponse).Message;
+            clientA.Deliveries.Clear();
+            clientB.Deliveries.Clear();
+            clock.UnixTimeMilliseconds = before.TurnDeadlineUnixTimeMilliseconds;
+
+            endpointA.Send(new FireRequest
+            {
+                RequestId = "deadline-fire",
+                SessionToken = join.SessionToken,
+                TurnId = before.TurnId,
+                Target = new BoardPosition { X = 0, Y = 0 }
+            });
+            transport.ProcessPending();
+
+            var response = (FireResponse)clientA.Deliveries.Single(x => x.Message is FireResponse).Message;
+            Assert.That(response.Accepted, Is.False);
+            Assert.That(response.ErrorCode, Is.EqualTo(ProtocolErrorCode.TurnExpired));
+            var after = LatestSnapshot(clientB);
+            Assert.That(after.TurnId, Is.EqualTo(before.TurnId + 1));
+            Assert.That(after.StateVersion, Is.EqualTo(before.StateVersion + 1));
+            Assert.That(after.OpponentShots, Is.Empty);
+            Assert.That(adapter.ProcessDeadlines(), Is.False);
+        }
+
+        private ManualClock SetUpIntegratedServer(out BattleServerTransportAdapter adapter)
+        {
+            transport.Dispose();
+            transport = CreateTransport();
+            clientA = new RecordingReceiver();
+            clientB = new RecordingReceiver();
+            endpointA = transport.RegisterClient(ClientEndpointId.ClientA, Settings(), clientA);
+            endpointB = transport.RegisterClient(ClientEndpointId.ClientB, Settings(), clientB);
+            var clock = new ManualClock();
+            var battleServer = new BattleServer(new GameRulesConfig(6, 3, 2, 2, 1),
+                new Random(41), clock, 15000);
+            adapter = new BattleServerTransportAdapter(battleServer, transport);
+            transport.RegisterServer(adapter);
+            endpointA.Send(new JoinRequest { RequestId = "join-a" });
+            endpointB.Send(new JoinRequest { RequestId = "join-b" });
+            transport.ProcessPending();
+            return clock;
+        }
+
+        private static MatchSnapshot LatestSnapshot(RecordingReceiver receiver) =>
+            (MatchSnapshot)receiver.Deliveries.Last(x => x.Message is MatchSnapshot).Message;
+
         private static InProcessTransport CreateTransport() =>
             new InProcessTransport(new XmlMessageSerializer(ProtocolMessageTypes.All));
 
@@ -367,7 +476,7 @@ namespace Battleships.Tests.Networking
 
         private sealed class ManualClock : IServerClock
         {
-            public long UnixTimeMilliseconds => 1000;
+            public long UnixTimeMilliseconds { get; set; } = 1000;
         }
     }
 }

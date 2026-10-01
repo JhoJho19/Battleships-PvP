@@ -1,4 +1,4 @@
-# PLAN.md §4.6 — Two Clients and Minimal UI
+# PLAN.md §4.6 and §4.7 — Two Clients, Minimal UI and Turn Timer
 
 ## Client projection
 
@@ -43,8 +43,23 @@ Cell states reuse the prepared sprites: `ui_atlas_020` (unknown), `ui_atlas_021`
 `ui_atlas_023`/`024` (hover/pressed), and `Ship`, `Miss`, `Hit`, `Sunk`. Opponent boards never render
 `Ship`.
 
-The timer formats the confirmed server deadline as a visual countdown. It never switches turns or
-processes server deadlines. Server-side timeout processing remains stage 4.7.
+The timer formats the confirmed absolute server deadline as a visual countdown. `ClientState`
+calculates `max(0, deadline - now)` from a caller-supplied time, so the calculation is deterministic
+and reads no system clock itself. It never validates a shot, switches turns or processes server
+deadlines.
+
+Stage 4.7 adds a separate cancellable runtime loop that checks the authoritative server deadline
+periodically. It does not wait for a fixed 15-second delay: an accepted shot may replace the absolute
+deadline at any time. When a real timeout transition occurs, the server adapter sends a newly built
+personalized snapshot to both registered clients. A silently disconnected endpoint may drop its
+copy, but cannot pause or reset the server timer.
+
+## Verification
+
+Verified in Unity 6000.3.10f1 on 2026-10-01: the affected Server/Networking/Client EditMode
+assemblies passed 54/54 tests and the full EditMode suite passed 77/77 tests. In Play Mode, after the
+two initial joins and with no gameplay request, the server advanced the turn and both client states
+received the same updated turn/version/deadline projection. The Console contained no errors.
 
 The transport log view formats the existing `InProcessTransport.Log` entries and does not inspect
 gameplay DTO contents.

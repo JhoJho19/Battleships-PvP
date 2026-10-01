@@ -46,6 +46,7 @@ namespace Battleships.Runtime
 
             clientOne.Join();
             clientTwo.Join();
+            ProcessServerDeadlinesAsync(destroyCancellationToken).Forget();
             RefreshTimersAsync(destroyCancellationToken).Forget();
         }
 
@@ -80,6 +81,22 @@ namespace Battleships.Runtime
                 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 clientOneView.RefreshTimer(now);
                 clientTwoView.RefreshTimer(now);
+                await UniTask.Delay(100, DelayType.UnscaledDeltaTime,
+                    PlayerLoopTiming.Update, cancellationToken);
+            }
+        }
+
+        private async UniTaskVoid ProcessServerDeadlinesAsync(
+            System.Threading.CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (adapter != null && adapter.ProcessDeadlines())
+                {
+                    transport.ProcessPending();
+                    transportLogView.Render(transport.Log);
+                }
+
                 await UniTask.Delay(100, DelayType.UnscaledDeltaTime,
                     PlayerLoopTiming.Update, cancellationToken);
             }
