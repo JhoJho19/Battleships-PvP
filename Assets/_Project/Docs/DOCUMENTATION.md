@@ -19,4 +19,20 @@ UniTask loop и рассылку персональных snapshot только 
 Этап 4.8 подключает подготовленные debug panels к endpoint-specific `NetworkSettings`, silent
 disconnect/connect и фильтрации существующего transport log. `ClientDebugView` владеет четырьмя
 runtime-полями debug panel и существующими сетевыми controls, а `ClientDebugController` содержит
-тестируемую валидацию и преобразование процентов. Полное client recreation/resume остаётся этапом 4.9.
+тестируемую валидацию и преобразование процентов. Эти controls используются runtime-потоком 4.9.
+
+Этап 4.9 добавляет application-level heartbeat, обнаружение `ConnectionLost`, Resume существующей
+server-side session и полное пересоздание отдельного client runtime. `SessionToken` переживает
+recreation в `ClientSessionIdentity`, а актуальная generation логического endpoint проверяется
+transport-адаптером. Подробности lifecycle и reconciliation описаны в `CLIENT_RUNTIME.md`.
+
+Этап 4.10 укрепляет существующие гарантии duplicate/loss/out-of-order без нового reliable transport.
+`PendingShot` хранит исходные `RequestId`, `TurnId` и target, а явный client-level retry повторяет ту
+же logical operation. Cache-first server semantics, stale-turn validation, монотонный `StateVersion`,
+pending gating и endpoint generation зафиксированы детерминированными integration tests. Подробности
+и результаты проверки описаны в `CLIENT_RUNTIME.md`.
+
+Этап 4.11 фиксирует полное EditMode-покрытие правил игры и пяти приоритетных сетевых сценариев.
+Добавлен недостающий integration test быстрого двойного клика при фиксированной transport latency;
+остальные требования уже проверялись существующими Domain, reliability и reconnect tests. Матрица
+требований, тестов и результаты прогонов приведены в `CLIENT_RUNTIME.md`.

@@ -45,11 +45,13 @@ namespace Battleships.Client
     public sealed class PendingShot
     {
         public string RequestId { get; }
+        public long TurnId { get; }
         public ClientPosition Target { get; }
 
-        internal PendingShot(string requestId, ClientPosition target)
+        internal PendingShot(string requestId, long turnId, ClientPosition target)
         {
             RequestId = requestId;
+            TurnId = turnId;
             Target = target;
         }
     }
@@ -63,7 +65,6 @@ namespace Battleships.Client
 
         public bool HasIdentity { get; private set; }
         public PlayerSlot PlayerSlot { get; private set; }
-        public string SessionToken { get; private set; }
         public int BoardSize { get; private set; }
         public ClientMatchStatus MatchStatus { get; private set; } = ClientMatchStatus.WaitingForPlayers;
         public PlayerSlot CurrentPlayer { get; private set; }
@@ -91,11 +92,10 @@ namespace Battleships.Client
             if (response == null || string.IsNullOrWhiteSpace(response.SessionToken)) return false;
             HasIdentity = true;
             PlayerSlot = response.PlayerSlot;
-            SessionToken = response.SessionToken;
             return true;
         }
 
-        internal bool ApplySnapshot(MatchSnapshot snapshot)
+        internal bool ApplySnapshot(MatchSnapshot snapshot, bool reconcilePending = false)
         {
             if (snapshot == null || snapshot.StateVersion < StateVersion) return false;
             if (HasIdentity && snapshot.PlayerSlot != PlayerSlot) return false;
@@ -126,13 +126,14 @@ namespace Battleships.Client
                 if (shot?.Position == null) continue;
                 opponentShots[new ClientPosition(shot.Position.X, shot.Position.Y)] = shot.Result;
             }
+            if (reconcilePending) PendingShot = null;
             return true;
         }
 
-        internal bool TryBeginShot(string requestId, ClientPosition target)
+        internal bool TryBeginShot(string requestId, long turnId, ClientPosition target)
         {
             if (!CanFire(target) || string.IsNullOrWhiteSpace(requestId)) return false;
-            PendingShot = new PendingShot(requestId, target);
+            PendingShot = new PendingShot(requestId, turnId, target);
             return true;
         }
 

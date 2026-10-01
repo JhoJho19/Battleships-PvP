@@ -7,20 +7,34 @@ namespace Battleships.Client
     public sealed class BattleClient : ITransportMessageReceiver, IDisposable
     {
         private readonly Func<string> requestIdFactory;
+        private readonly Func<double> timeMilliseconds;
+        private readonly ClientSessionIdentity sessionIdentity;
         private ClientTransportEndpoint endpoint;
         private bool disposed;
+        private bool resumePending;
 
         public ClientState State { get; } = new ClientState();
-        public ClientConnectionMonitor Connection { get; } = new ClientConnectionMonitor();
+        public ClientConnectionMonitor Connection { get; }
+        public ClientSessionIdentity SessionIdentity => sessionIdentity;
         public string LastRequestId { get; private set; }
 
         public event Action StateChanged;
         public event Action<string> RuntimeEvent;
         public event Action RequestSent;
 
-        public BattleClient(Func<string> requestIdFactory = null)
+        public BattleClient(Func<string> requestIdFactory = null) : this(
+            new ClientSessionIdentity(), 5000d,
+            () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), requestIdFactory)
         {
+        }
+
+        public BattleClient(ClientSessionIdentity sessionIdentity, double connectionTimeoutMilliseconds,
+            Func<double> timeMilliseconds, Func<string> requestIdFactory = null)
+        {
+            this.sessionIdentity = sessionIdentity ?? throw new ArgumentNullException(nameof(sessionIdentity));
+            this.timeMilliseconds = timeMilliseconds ?? throw new ArgumentNullException(nameof(timeMilliseconds));
             this.requestIdFactory = requestIdFactory ?? (() => Guid.NewGuid().ToString("N"));
+            Connection = new ClientConnectionMonitor(connectionTimeoutMilliseconds);
         }
 
         public void AttachEndpoint(ClientTransportEndpoint transportEndpoint)
@@ -28,7 +42,7 @@ namespace Battleships.Client
             if (disposed) throw new ObjectDisposedException(nameof(BattleClient));
             if (endpoint != null) throw new InvalidOperationException("A transport endpoint is already attached.");
             endpoint = transportEndpoint ?? throw new ArgumentNullException(nameof(transportEndpoint));
-            Connection.Register(endpoint.Identity);
+            Connection.Register(endpoint.Identity, Now());
             StateChanged?.Invoke();
         }
 
@@ -38,12 +52,51 @@ namespace Battleships.Client
             Send(new JoinRequest { RequestId = NextRequestId() });
         }
 
+        public void Resume()
+        {
+            EnsureReady();
+            if (!sessionIdentity.HasSession)
+                throw new InvalidOperationException("The client has no session to resume.");
+
+            Connection.BeginResuming(Now());
+            resumePending = true;
+            var requestId = NextRequestId();
+            LastRequestId = requestId;
+            RuntimeEvent?.Invoke("Resume sent");
+            StateChanged?.Invoke();
+            Send(new ResumeRequest
+            {
+                RequestId = requestId,
+                SessionToken = sessionIdentity.SessionToken
+            });
+        }
+
+        public bool SendHeartbeat()
+        {
+            EnsureReady();
+            if (!sessionIdentity.HasSession || Connection.State != ClientConnectionState.Connected)
+                return false;
+            Send(new HeartbeatRequest { SessionToken = sessionIdentity.SessionToken });
+            return true;
+        }
+
+        public bool CheckConnection()
+        {
+            EnsureReady();
+            if (!Connection.Evaluate(Now())) return false;
+            RuntimeEvent?.Invoke("Connection lost");
+            StateChanged?.Invoke();
+            return true;
+        }
+
         public bool TryFire(ClientPosition target)
         {
             EnsureReady();
+            if (Connection.State != ClientConnectionState.Connected) return false;
             if (!State.CanFire(target)) return false;
             var requestId = NextRequestId();
-            if (!State.TryBeginShot(requestId, target))
+            var turnId = State.TurnId;
+            if (!State.TryBeginShot(requestId, turnId, target))
                 throw new InvalidOperationException("The client state changed while creating a shot request.");
 
             LastRequestId = requestId;
@@ -52,9 +105,27 @@ namespace Battleships.Client
             Send(new FireRequest
             {
                 RequestId = requestId,
-                SessionToken = State.SessionToken,
-                TurnId = State.TurnId,
+                SessionToken = sessionIdentity.SessionToken,
+                TurnId = turnId,
                 Target = new BoardPosition { X = target.X, Y = target.Y }
+            });
+            return true;
+        }
+
+        public bool RetryPendingShot()
+        {
+            EnsureReady();
+            if (Connection.State != ClientConnectionState.Connected) return false;
+            var pending = State.PendingShot;
+            if (pending == null) return false;
+
+            RuntimeEvent?.Invoke($"Fire {pending.Target} retry sent");
+            Send(new FireRequest
+            {
+                RequestId = pending.RequestId,
+                SessionToken = sessionIdentity.SessionToken,
+                TurnId = pending.TurnId,
+                Target = new BoardPosition { X = pending.Target.X, Y = pending.Target.Y }
             });
             return true;
         }
@@ -66,23 +137,40 @@ namespace Battleships.Client
             if (delivery.Direction != TransportDirection.ServerToClient ||
                 endpoint == null || delivery.Endpoint != endpoint.Identity) return;
 
+            var now = Now();
+
             switch (delivery.Message)
             {
                 case JoinResponse response:
-                    if (State.ApplyJoin(response))
+                    if (sessionIdentity.Apply(response) && State.ApplyJoin(response))
                     {
+                        Connection.ObserveServerMessage(now);
                         RuntimeEvent?.Invoke("Joined match");
                         StateChanged?.Invoke();
                     }
                     break;
                 case MatchSnapshot snapshot:
-                    if (State.ApplySnapshot(snapshot))
+                    if (sessionIdentity.HasSession && snapshot != null &&
+                        snapshot.PlayerSlot != sessionIdentity.PlayerSlot) break;
+                    Connection.ObserveServerMessage(now);
+                    var resuming = resumePending;
+                    if (State.ApplySnapshot(snapshot, resuming))
                     {
-                        RuntimeEvent?.Invoke("Snapshot received");
+                        if (resuming)
+                        {
+                            resumePending = false;
+                            Connection.CompleteSynchronization(now);
+                            RuntimeEvent?.Invoke("Resume accepted");
+                            RuntimeEvent?.Invoke("Snapshot synchronized");
+                        }
+                        else
+                            RuntimeEvent?.Invoke("Snapshot received");
                         StateChanged?.Invoke();
                     }
                     break;
                 case FireResponse response:
+                    Connection.ObserveServerMessage(now);
+                    if (Connection.State != ClientConnectionState.Connected) break;
                     var pending = State.PendingShot;
                     if (!State.ApplyFireResponse(response)) break;
                     RuntimeEvent?.Invoke(response.Accepted
@@ -91,7 +179,11 @@ namespace Battleships.Client
                     StateChanged?.Invoke();
                     break;
                 case ErrorResponse response:
+                    Connection.ObserveServerMessage(now);
                     RuntimeEvent?.Invoke($"Request rejected: {response.ErrorCode}");
+                    break;
+                case HeartbeatResponse _:
+                    Connection.ObserveServerMessage(now);
                     break;
             }
         }
@@ -126,6 +218,14 @@ namespace Battleships.Client
         {
             if (disposed) throw new ObjectDisposedException(nameof(BattleClient));
             if (endpoint == null) throw new InvalidOperationException("No transport endpoint is attached.");
+        }
+
+        private double Now()
+        {
+            var value = timeMilliseconds();
+            if (double.IsNaN(value) || double.IsInfinity(value))
+                throw new InvalidOperationException("The client time provider returned a non-finite value.");
+            return value;
         }
     }
 }

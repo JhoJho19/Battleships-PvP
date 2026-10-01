@@ -41,6 +41,7 @@
   <Project Path="Unity.InternalAPIEditorBridge.001.csproj" />
   <Project Path="Battleships.Client.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />
+  <Project Path="Battleships.Client.Tests.csproj" />
   <Project Path="Unity.Collections.CodeGen.csproj" />
   <Project Path="Unity.2D.Tilemap.Extras.csproj" />
   <Project Path="Unity.2D.Animation.Runtime.csproj" />
@@ -51,9 +52,8 @@
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
   <Project Path="Battleships.Server.csproj" />
-  <Project Path="Battleships.Client.Tests.csproj" />
-  <Project Path="Battleships.Protocol.csproj" />
   <Project Path="Battleships.Presentation.csproj" />
+  <Project Path="Battleships.Protocol.csproj" />
   <Project Path="Unity.Pipeline.Attributes.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="Battleships.Server.Tests.csproj" />

@@ -62,7 +62,7 @@ namespace Battleships.Presentation
             if (controller == null) return;
             var settings = controller.Settings;
             endpoint.text = controller.EndpointText;
-            SetStatusText(connected, controller.ConnectedText, controller.IsDeliveryEnabled);
+            SetStatusText(connected, controller.ConnectedText, controller.IsApplicationConnected);
             lastRequestId.text = controller.LastRequestIdText;
             recentEvents.text = controller.RecentEventsText;
             latency.SetTextWithoutNotify(Format(settings.LatencyMilliseconds));
@@ -70,6 +70,7 @@ namespace Battleships.Presentation
             loss.SetTextWithoutNotify(Format(settings.LossRate * 100d));
             duplicate.SetTextWithoutNotify(Format(settings.DuplicateRate * 100d));
             networkLog.SetIsOnWithoutNotify(controller.IsNetworkLogEnabled);
+            recreateClient.interactable = controller.CanResume;
         }
 
         private void OnLatencyChanged(string value) => latency.SetTextWithoutNotify(controller.SetLatency(value));

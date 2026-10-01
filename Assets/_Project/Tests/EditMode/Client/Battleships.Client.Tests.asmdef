@@ -2,8 +2,11 @@
     "name": "Battleships.Client.Tests",
     "rootNamespace": "Battleships.Tests.Client",
     "references": [
+        "Battleships.Domain",
         "Battleships.Protocol",
         "Battleships.Networking",
+        "Battleships.Networking.Integration",
+        "Battleships.Server",
         "Battleships.Client"
     ],
     "includePlatforms": ["Editor"],

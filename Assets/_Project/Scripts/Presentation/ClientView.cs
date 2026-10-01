@@ -57,7 +57,10 @@ namespace Battleships.Presentation
             playerNumber.text = state.HasIdentity
                 ? state.PlayerSlot == PlayerSlot.PlayerOne ? "Player 1" : "Player 2"
                 : "Waiting";
-            SetStatusText(yourTurn, state.IsYourTurn ? "Your turn" : "Waiting", state.IsYourTurn);
+            var connected = client.Connection.IsConnected;
+            var turnText = connected ? state.IsYourTurn ? "Your turn" : "Waiting"
+                : client.Connection.State == ClientConnectionState.Resuming ? "Resuming" : "Connection lost";
+            SetStatusText(yourTurn, turnText, connected && state.IsYourTurn);
             matchStatus.text = MatchStatusText(state.MatchStatus);
             stateVersion.text = state.StateVersion > 0 ? $"v{state.StateVersion}" : "v0";
             turnId.text = state.TurnId > 0 ? state.TurnId.ToString() : "-";
@@ -68,7 +71,7 @@ namespace Battleships.Presentation
             opponentBoard.Render(state);
         }
 
-        private void Unbind()
+        public void Unbind()
         {
             if (client == null) return;
             client.StateChanged -= Render;

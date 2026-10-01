@@ -20,6 +20,8 @@ namespace Battleships.Presentation
         {
             if (boardSize <= 0) throw new ArgumentOutOfRangeException(nameof(boardSize));
             cellClicked = onCellClicked;
+            if (cells != null && cells.GetLength(0) == boardSize && cells.GetLength(1) == boardSize)
+                return;
             ClearRuntimeCells();
 
             var rect = (RectTransform)transform;

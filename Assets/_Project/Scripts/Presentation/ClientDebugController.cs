@@ -17,9 +17,11 @@ namespace Battleships.Presentation
         public EndpointIdentity Endpoint => endpoint.Identity;
         public NetworkSettings Settings => endpoint.Settings;
         public bool IsDeliveryEnabled => !Settings.SilentlyDisconnected;
+        public bool IsApplicationConnected => client.Connection.State == ClientConnectionState.Connected;
+        public bool CanResume => client.SessionIdentity.HasSession;
         public bool IsNetworkLogEnabled => endpoint.LoggingEnabled;
         public string EndpointText => $"{FriendlyEndpoint(Endpoint.EndpointId)} / gen {Endpoint.Generation}";
-        public string ConnectedText => IsDeliveryEnabled ? "Yes" : "No";
+        public string ConnectedText => ConnectionText(client.Connection.State);
         public string LastRequestIdText => string.IsNullOrWhiteSpace(client.LastRequestId)
             ? "-"
             : $"#{ShortId(client.LastRequestId)}";
@@ -77,8 +79,23 @@ namespace Battleships.Presentation
             return Format(percentage);
         }
 
-        public void Disconnect() => SetDeliveryEnabled(false);
-        public void Connect() => SetDeliveryEnabled(true);
+        public void Disconnect()
+        {
+            SetDeliveryEnabled(false);
+            AddRecentEvent("Delivery disabled");
+        }
+
+        public void Connect()
+        {
+            SetDeliveryEnabled(true);
+            AddRecentEvent("Delivery restored");
+            if (!CanResume)
+            {
+                AddRecentEvent("No joined session to resume");
+                return;
+            }
+            client.Resume();
+        }
 
         public void SetNetworkLogEnabled(bool enabled)
         {
@@ -90,8 +107,20 @@ namespace Battleships.Presentation
         public void RequestRecreate()
         {
             ThrowIfDisposed();
-            AddRecentEvent("Recreate client is reserved for stage 4.9");
+            if (!CanResume)
+            {
+                AddRecentEvent("No joined session to recreate");
+                return;
+            }
+            AddRecentEvent("Client recreation requested");
             RecreateRequested?.Invoke(Endpoint.EndpointId);
+        }
+
+        public void ReportRuntimeEvent(string value)
+        {
+            ThrowIfDisposed();
+            if (string.IsNullOrWhiteSpace(value)) return;
+            AddRecentEvent(value);
         }
 
         public void Dispose()
@@ -145,6 +174,17 @@ namespace Battleships.Presentation
 
         private static string FriendlyEndpoint(ClientEndpointId id) =>
             id == ClientEndpointId.ClientA ? "Client A" : "Client B";
+
+        private static string ConnectionText(ClientConnectionState state)
+        {
+            switch (state)
+            {
+                case ClientConnectionState.Connected: return "Connected";
+                case ClientConnectionState.ConnectionLost: return "Connection lost";
+                case ClientConnectionState.Resuming: return "Resuming";
+                default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
+            }
+        }
 
         private static string ShortId(string requestId) =>
             requestId.Length <= 8 ? requestId : requestId.Substring(0, 8);

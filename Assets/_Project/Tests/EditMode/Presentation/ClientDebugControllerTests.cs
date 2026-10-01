@@ -69,9 +69,16 @@ namespace Battleships.Tests.Presentation
         [Test]
         public void DisconnectAndConnectChangeOnlyManualDeliveryState()
         {
+            transport.Send(endpointA.Identity, new JoinResponse
+            {
+                RequestId = "join-a",
+                SessionToken = "session-a",
+                PlayerSlot = PlayerSlot.PlayerOne
+            });
+            transport.ProcessPending();
             controllerA.Disconnect();
             Assert.That(endpointA.Settings.SilentlyDisconnected, Is.True);
-            Assert.That(controllerA.ConnectedText, Is.EqualTo("No"));
+            Assert.That(controllerA.ConnectedText, Is.EqualTo("Connected"));
             Assert.That(endpointB.Settings.SilentlyDisconnected, Is.False);
 
             endpointA.Send(new JoinRequest { RequestId = "lost" });
@@ -81,12 +88,14 @@ namespace Battleships.Tests.Presentation
             Assert.That(((JoinRequest)server.Deliveries[0].Message).RequestId, Is.EqualTo("other-client"));
 
             controllerA.Connect();
-            endpointA.Send(new JoinRequest { RequestId = "new-message" });
             transport.ProcessPending();
             Assert.That(server.Deliveries.Count, Is.EqualTo(2));
-            Assert.That(((JoinRequest)server.Deliveries[1].Message).RequestId, Is.EqualTo("new-message"));
+            Assert.That(server.Deliveries[1].Message, Is.TypeOf<ResumeRequest>());
+            Assert.That(((ResumeRequest)server.Deliveries[1].Message).SessionToken,
+                Is.EqualTo("session-a"));
+            Assert.That(controllerA.ConnectedText, Is.EqualTo("Resuming"));
             Assert.That(server.Deliveries.Exists(x =>
-                ((JoinRequest)x.Message).RequestId == "lost"), Is.False);
+                x.Message is JoinRequest request && request.RequestId == "lost"), Is.False);
         }
 
         [Test]
@@ -124,7 +133,7 @@ namespace Battleships.Tests.Presentation
 
             Assert.That(controllerA.EndpointText, Is.EqualTo("Client A / gen 1"));
             Assert.That(controllerA.RecentEventsText, Does.Contain("Joined match"));
-            Assert.That(controllerA.RecentEventsText, Does.Contain("reserved for stage 4.9"));
+            Assert.That(controllerA.RecentEventsText, Does.Contain("Client recreation requested"));
             Assert.That(controllerB.RecentEventsText, Is.Empty);
             Assert.That(requested, Is.EqualTo(new[] { ClientEndpointId.ClientA }));
         }

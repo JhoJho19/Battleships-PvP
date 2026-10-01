@@ -10,8 +10,11 @@ namespace Battleships.Networking.Integration
     {
         private readonly BattleServer server;
         private readonly IServerTransportSender sender;
-        private readonly Dictionary<EndpointIdentity, string> sessions =
-            new Dictionary<EndpointIdentity, string>();
+        private readonly Dictionary<ClientEndpointId, EndpointIdentity> activeEndpoints =
+            new Dictionary<ClientEndpointId, EndpointIdentity>();
+        private readonly Dictionary<ClientEndpointId, EndpointSession> sessions =
+            new Dictionary<ClientEndpointId, EndpointSession>();
+        private readonly HashSet<ClientEndpointId> inactiveEndpoints = new HashSet<ClientEndpointId>();
 
         public ServerTransportStatus Status { get; private set; } = ServerTransportStatus.Waiting(0);
         public event Action<ServerTransportStatus> StatusChanged;
@@ -20,6 +23,28 @@ namespace Battleships.Networking.Integration
         {
             this.server = server ?? throw new ArgumentNullException(nameof(server));
             this.sender = sender ?? throw new ArgumentNullException(nameof(sender));
+        }
+
+        public void ActivateEndpoint(EndpointIdentity endpoint)
+        {
+            if (activeEndpoints.TryGetValue(endpoint.EndpointId, out var current))
+            {
+                if (endpoint.Generation < current.Generation)
+                    throw new InvalidOperationException(
+                        $"Cannot reactivate stale endpoint {endpoint}; current endpoint is {current}.");
+                if (endpoint == current) return;
+            }
+
+            activeEndpoints[endpoint.EndpointId] = endpoint;
+            inactiveEndpoints.Remove(endpoint.EndpointId);
+            sessions.Remove(endpoint.EndpointId);
+        }
+
+        public void DeactivateEndpoint(EndpointIdentity endpoint)
+        {
+            if (!IsActive(endpoint)) return;
+            inactiveEndpoints.Add(endpoint.EndpointId);
+            sessions.Remove(endpoint.EndpointId);
         }
 
         public bool ProcessDeadlines()
@@ -34,6 +59,7 @@ namespace Battleships.Networking.Integration
             if (delivery == null) throw new ArgumentNullException(nameof(delivery));
             if (delivery.Direction != TransportDirection.ClientToServer)
                 throw new InvalidOperationException("The server adapter accepts only Client -> Server deliveries.");
+            if (!Accepts(delivery.Endpoint, delivery.Message)) return;
 
             switch (delivery.Message)
             {
@@ -61,9 +87,9 @@ namespace Battleships.Networking.Integration
             sender.Send(endpoint, Select(result));
             if (!result.IsSuccess) return;
 
-            sessions[endpoint] = result.Response.SessionToken;
+            sessions[endpoint.EndpointId] = new EndpointSession(endpoint, result.Response.SessionToken);
             PublishWaitingStatus();
-            if (sessions.Values.Distinct(StringComparer.Ordinal).Count() == 2)
+            if (sessions.Values.Select(x => x.SessionToken).Distinct(StringComparer.Ordinal).Count() == 2)
                 BroadcastSnapshots();
         }
 
@@ -72,7 +98,7 @@ namespace Battleships.Networking.Integration
             var result = server.Handle(request);
             sender.Send(endpoint, Select(result));
             if (!result.IsSuccess) return;
-            sessions[endpoint] = request.SessionToken;
+            sessions[endpoint.EndpointId] = new EndpointSession(endpoint, request.SessionToken);
             PublishStatus(result.Response);
         }
 
@@ -86,12 +112,13 @@ namespace Battleships.Networking.Integration
         private void BroadcastSnapshots()
         {
             MatchSnapshot statusSource = null;
-            foreach (var pair in sessions)
+            foreach (var pair in sessions.Values)
             {
-                var snapshot = server.GetSnapshot(pair.Value);
+                if (!IsActive(pair.Endpoint)) continue;
+                var snapshot = server.GetSnapshot(pair.SessionToken);
                 if (!snapshot.IsSuccess) continue;
                 statusSource = statusSource ?? snapshot.Response;
-                sender.Send(pair.Key, snapshot.Response);
+                sender.Send(pair.Endpoint, snapshot.Response);
             }
 
             if (statusSource != null) PublishStatus(statusSource);
@@ -109,8 +136,36 @@ namespace Battleships.Networking.Integration
             StatusChanged?.Invoke(Status);
         }
 
+        private bool Accepts(EndpointIdentity endpoint, object message)
+        {
+            if (!activeEndpoints.TryGetValue(endpoint.EndpointId, out var active))
+            {
+                if (!(message is JoinRequest) && !(message is ResumeRequest)) return false;
+                ActivateEndpoint(endpoint);
+                return true;
+            }
+
+            return IsActive(endpoint);
+        }
+
+        private bool IsActive(EndpointIdentity endpoint) =>
+            !inactiveEndpoints.Contains(endpoint.EndpointId) &&
+            activeEndpoints.TryGetValue(endpoint.EndpointId, out var active) && active == endpoint;
+
         private static object Select<T>(ServerResult<T> result) where T : class =>
             result.IsSuccess ? (object)result.Response : result.Error;
+
+        private readonly struct EndpointSession
+        {
+            public EndpointIdentity Endpoint { get; }
+            public string SessionToken { get; }
+
+            public EndpointSession(EndpointIdentity endpoint, string sessionToken)
+            {
+                Endpoint = endpoint;
+                SessionToken = sessionToken;
+            }
+        }
     }
 
     public sealed class ServerTransportStatus

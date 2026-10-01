@@ -14,16 +14,21 @@ namespace Battleships.Tests.Client
         private RecordingReceiver server;
         private BattleClient client;
         private ClientTransportEndpoint endpoint;
+        private ClientSessionIdentity sessionIdentity;
         private int requestNumber;
+        private double nowMilliseconds;
 
         [SetUp]
         public void SetUp()
         {
             requestNumber = 0;
+            nowMilliseconds = 0;
             transport = new InProcessTransport(new XmlMessageSerializer(ProtocolMessageTypes.All));
             server = new RecordingReceiver();
             transport.RegisterServer(server);
-            client = new BattleClient(() => $"request-{++requestNumber}");
+            sessionIdentity = new ClientSessionIdentity();
+            client = new BattleClient(sessionIdentity, 5000, () => nowMilliseconds,
+                () => $"request-{++requestNumber}");
             endpoint = transport.RegisterClient(ClientEndpointId.ClientA, new NetworkSettings(), client);
             client.AttachEndpoint(endpoint);
             Deliver(new JoinResponse
@@ -74,6 +79,10 @@ namespace Battleships.Tests.Client
         {
             Assert.That(client.TryFire(new ClientPosition(1, 2)), Is.True);
             Assert.That(client.TryFire(new ClientPosition(2, 2)), Is.False);
+            Assert.That(requestNumber, Is.EqualTo(1));
+            Assert.That(transport.Log.Count(x => x.Direction == TransportDirection.ClientToServer &&
+                x.Status == TransportLogStatus.Sent && x.MessageType == typeof(FireRequest).FullName),
+                Is.EqualTo(1));
             transport.ProcessPending();
 
             var request = (FireRequest)server.Deliveries.Single().Message;
@@ -81,6 +90,27 @@ namespace Battleships.Tests.Client
             Assert.That(request.TurnId, Is.EqualTo(9));
             Assert.That(request.Target.X, Is.EqualTo(1));
             Assert.That(request.Target.Y, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RetryPendingShotResendsTheOriginalOperationWithoutGeneratingAnId()
+        {
+            Assert.That(client.TryFire(new ClientPosition(1, 2)), Is.True);
+            var pending = client.State.PendingShot;
+
+            Assert.That(client.RetryPendingShot(), Is.True);
+            Assert.That(client.State.PendingShot, Is.SameAs(pending));
+            Assert.That(pending.RequestId, Is.EqualTo("request-1"));
+            Assert.That(pending.TurnId, Is.EqualTo(9));
+            Assert.That(pending.Target, Is.EqualTo(new ClientPosition(1, 2)));
+            Assert.That(requestNumber, Is.EqualTo(1));
+
+            transport.ProcessPending();
+            var requests = server.Deliveries.Select(x => x.Message).OfType<FireRequest>().ToArray();
+            Assert.That(requests, Has.Length.EqualTo(2));
+            Assert.That(requests.Select(x => x.RequestId), Is.All.EqualTo(pending.RequestId));
+            Assert.That(requests.Select(x => x.TurnId), Is.All.EqualTo(pending.TurnId));
+            Assert.That(requests.Select(x => $"{x.Target.X},{x.Target.Y}"), Is.All.EqualTo("1,2"));
         }
 
         [Test]
@@ -184,6 +214,125 @@ namespace Battleships.Tests.Client
             Assert.That(client.State.GetRemainingTurnMilliseconds(25000), Is.Zero);
             Assert.That(client.State.TurnId, Is.EqualTo(turnId));
             Assert.That(client.State.CurrentPlayer, Is.EqualTo(currentPlayer));
+        }
+
+        [Test]
+        public void AnyValidServerMessageRefreshesConnectionLiveness()
+        {
+            nowMilliseconds = 4000;
+            Deliver(new HeartbeatResponse());
+            nowMilliseconds = 8000;
+
+            Assert.That(client.CheckConnection(), Is.False);
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.Connected));
+
+            Deliver(new ErrorResponse { ErrorCode = ProtocolErrorCode.InvalidRequest });
+            nowMilliseconds = 12000;
+            Assert.That(client.CheckConnection(), Is.False);
+        }
+
+        [Test]
+        public void SilentDisconnectIsDetectedOnlyAfterTimeoutAndBlocksGameplay()
+        {
+            endpoint.Configure(new NetworkSettings(silentlyDisconnected: true));
+
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.Connected));
+            Assert.That(client.TryFire(new ClientPosition(1, 2)), Is.True);
+            nowMilliseconds = 5000;
+            Assert.That(client.CheckConnection(), Is.False);
+            nowMilliseconds = 5001;
+
+            Assert.That(client.CheckConnection(), Is.True);
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.ConnectionLost));
+            Assert.That(client.TryFire(new ClientPosition(2, 2)), Is.False);
+        }
+
+        [Test]
+        public void HeartbeatUsesNormalTransportPathAndRetainedSessionToken()
+        {
+            Assert.That(client.SendHeartbeat(), Is.True);
+            transport.ProcessPending();
+
+            var heartbeat = (HeartbeatRequest)server.Deliveries.Single().Message;
+            Assert.That(heartbeat.SessionToken, Is.EqualTo("session-a"));
+            Assert.That(sessionIdentity.SessionToken, Is.EqualTo("session-a"));
+        }
+
+        [Test]
+        public void ResumeKeepsPendingUntilValidSnapshotSynchronizes()
+        {
+            Assert.That(client.TryFire(new ClientPosition(1, 2)), Is.True);
+            var pending = client.State.PendingShot;
+
+            client.Resume();
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.Resuming));
+            Assert.That(client.State.PendingShot, Is.SameAs(pending));
+            Assert.That(client.TryFire(new ClientPosition(2, 2)), Is.False);
+            transport.ProcessPending();
+            var resume = server.Deliveries.Select(x => x.Message).OfType<ResumeRequest>().Single();
+            Assert.That(resume.SessionToken, Is.EqualTo("session-a"));
+
+            Deliver(Snapshot(PlayerSlot.PlayerOne, 3, 8));
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.Resuming));
+            Assert.That(client.State.PendingShot, Is.SameAs(pending));
+
+            Deliver(Snapshot(PlayerSlot.PlayerOne, 4, 9));
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.Connected));
+            Assert.That(client.State.PendingShot, Is.Null);
+            Assert.That(client.State.StateVersion, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void ResumeTimesOutWithoutAddingAutomaticRetry()
+        {
+            client.Resume();
+            transport.ProcessPending();
+            server.Deliveries.Clear();
+            nowMilliseconds = 5001;
+
+            Assert.That(client.CheckConnection(), Is.True);
+            Assert.That(client.Connection.State, Is.EqualTo(ClientConnectionState.ConnectionLost));
+            Assert.That(server.Deliveries, Is.Empty);
+        }
+
+        [Test]
+        public void DelayedValidResumeSnapshotSynchronizesEvenAfterLivenessTimeout()
+        {
+            client.TryFire(new ClientPosition(1, 2));
+            client.Resume();
+            nowMilliseconds = 5001;
+            client.CheckConnection();
+            Assert.That(client.State.PendingShot, Is.Not.Null);
+            Deliver(Snapshot(PlayerSlot.PlayerOne, 4, 9));
+            Assert.That(client.Connection.IsConnected, Is.True);
+            Assert.That(client.State.PendingShot, Is.Null);
+        }
+
+        [Test]
+        public void LostConnectionBlocksNewShotWithNoPendingOperation()
+        {
+            nowMilliseconds = 5001;
+            client.CheckConnection();
+            Assert.That(client.State.PendingShot, Is.Null);
+            Assert.That(client.TryFire(new ClientPosition(1, 2)), Is.False);
+            Assert.That(server.Deliveries, Is.Empty);
+        }
+
+        [Test]
+        public void RegularSnapshotsAndEqualVersionsKeepConnectionAliveAndNeverRollBack()
+        {
+            for (var i = 1; i <= 5; i++)
+            {
+                nowMilliseconds = i * 4000;
+                Deliver(Snapshot(PlayerSlot.PlayerOne, 4 + i, 9 + i));
+                Assert.That(client.CheckConnection(), Is.False);
+            }
+            client.Resume();
+            Deliver(Snapshot(PlayerSlot.PlayerOne, 9, 14));
+            Deliver(Snapshot(PlayerSlot.PlayerOne, 8, 13));
+            Assert.That(client.Connection.IsConnected, Is.True);
+            Assert.That(client.State.StateVersion, Is.EqualTo(9));
+            Assert.That(client.State.TurnId, Is.EqualTo(14));
         }
 
         private void Deliver(object message)
