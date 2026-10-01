@@ -18,6 +18,22 @@
 
 Транспорт работает с сериализованными копиями сообщений и не знает правил игры. Для каждого клиента отдельно можно настроить latency, jitter, loss, duplication и silent disconnect. Очередь доставки обрабатывается явно, поэтому сетевые сценарии можно воспроизводить детерминированно в EditMode-тестах.
 
+## Запуск сцены и ручное подключение
+
+При входе в Play Mode `BattleRuntimeComposition` создаёт один `BattleServer`, один `InProcessTransport`, два client runtime и связывает их с существующими UI. Начальные endpoint имеют выключенную доставку; клиенты находятся в `Disconnected`, без `SessionToken` и назначенной игровой роли. Оба окна показывают `Player -`, таймер — `00 : 00`, сервер — `Connected Clients: 0/2` и `Waiting for Players`, без version, текущего хода и TurnId. Игровые действия недоступны до получения сессии и активного snapshot.
+
+Статические подписи `Client 1` и `Client 2` обозначают локальные runtime/UI slots. Игровые роли определяет сервер: первый успешно обработанный initial Join получает `PlayerOne`, второй — `PlayerTwo`. Поэтому Client 2 может стать Player 1, а Client 1 — Player 2. Назначенные token и `PlayerSlot` хранятся в `ClientSessionIdentity`; UI читает подтверждённую роль из собственного `ClientState`.
+
+Кнопка `Connect` включает transport delivery и вызывает `BattleClient.Connect()`. Без token клиент отправляет `JoinRequest` и переходит в `Connecting`; успешный `JoinResponse` сохраняет identity и переводит его в `Connected`. Повторный initial Connect в том же runtime использует исходный `RequestId`, чтобы потеря ответа не создавала дополнительного игрока. При наличии token Connect отправляет `ResumeRequest` и переходит в `Resuming`; свежий персональный snapshot восстанавливает состояние существующей сессии.
+
+Если jitter доставляет initial snapshot раньше `JoinResponse`, клиент временно сохраняет его без применения к UI или gameplay. После подтверждения identity применяется сохранённый snapshot с соответствующим `PlayerSlot`; до этого роль и deadline остаются не назначены.
+
+После первого Join существует только одна player session: матч ещё не создан, gameplay turn и deadline отсутствуют, сервер показывает `1/2` и ожидание. При втором успешном Join `BattleServer` вызывает `MatchService.Start()`: сервер расставляет корабли, назначает Player 1 первый ход, устанавливает `StateVersion = 1`, `TurnId = 1` и deadline `serverNow + 15000 ms` при стандартной конфигурации. Адаптер рассылает обоим игрокам персональные snapshots. Отменяемый цикл обработки дедлайнов работает независимо от клиентов; до создания матча его проверки ничего не меняют.
+
+`Disconnect` сохраняет прежнюю silent semantics: выключает доставку без события разрыва; client monitor обнаруживает потерю связи по timeout. Сессия, роль и матч сохраняются, server deadline продолжает действовать. Следующий Connect использует Resume. `Recreate Client` освобождает прежний runtime, создаёт новый endpoint generation и client state, сохраняя `ClientSessionIdentity`, затем вызывает тот же Connect/Resume. До получения первой сессии recreation недоступна.
+
+Если существующая сессия восстанавливается до второго Join, сервер возвращает `MatchNotReady`: это подтверждает валидную сессию при отсутствии матча. Адаптер привязывает к ней новый endpoint, а клиент восстанавливает сохранённую роль и `Connected` в состоянии ожидания, без deadline. После второго Join он получает обычный персональный snapshot. Формат протокола при этом не меняется.
+
 ## Зависимости слоёв
 
 `Battleships.Domain` и `Battleships.Protocol` не зависят от Unity и других игровых слоёв. `Battleships.Configuration` зависит от Domain. `Battleships.Server` зависит только от Domain и Protocol. `Battleships.Networking` зависит только от Protocol. `Battleships.Networking.Integration` соединяет Networking с Server. `Battleships.Client` зависит от Protocol и Networking, но не имеет доступа к серверному Domain state. `Battleships.Presentation` зависит от Client, Protocol и Networking. `Battleships.Runtime` является composition root и единственным слоем, который собирает всю систему вместе.
@@ -142,7 +158,7 @@
 
 **`BattleClient`** — клиентская application-логика. Отправляет join, resume, heartbeat и fire, принимает ответы транспорта, обновляет `ClientState`, отслеживает связь и публикует события для UI и runtime. Повтор pending-выстрела использует тот же `RequestId` и `TurnId`.
 
-**`ClientConnectionMonitor`** — небольшая state machine соединения. Хранит текущий endpoint и время последнего серверного сообщения, различает `Connected`, `ConnectionLost` и `Resuming` и обнаруживает timeout.
+**`ClientConnectionMonitor`** — небольшая state machine соединения. Регистрация endpoint оставляет клиент в `Disconnected`; initial Join использует `Connecting`, успешный ответ — `Connected`, восстановление сессии — `Resuming`, timeout — `ConnectionLost`. Хранит текущий endpoint и время последнего серверного сообщения; timeout не применяется к не подключавшемуся клиенту.
 
 **`ClientSessionIdentity`** — долговечная идентичность клиента: session token и слот игрока. Объект сохраняется при пересоздании остального client runtime, чтобы новый клиент мог выполнить resume.
 
@@ -162,7 +178,7 @@
 
 **`ClientView`** — Unity `MonoBehaviour` основного окна игрока. Показывает номер игрока, связь, статус матча, ход, version, timer, pending request и обе доски. На сцене висит на `Canvas/UI/ImagePlayerWindow` и `Canvas/UI/ImagePlayerWindow (1)`.
 
-**`ClientDebugController`** — обычный C#-контроллер debug-панели. Проверяет и применяет сетевые параметры, включает и выключает доставку и лог, запрашивает resume/recreate и хранит последние runtime-события. Не висит на сцене, а создаётся `BattleRuntimeComposition` отдельно для каждого клиента.
+**`ClientDebugController`** — обычный C#-контроллер debug-панели. Проверяет и применяет сетевые параметры, включает и выключает доставку и лог, вызывает единый Connect (Join или Resume в зависимости от identity), запрашивает recreation и хранит последние runtime-события. Не висит на сцене, а создаётся `BattleRuntimeComposition` отдельно для каждого клиента.
 
 **`ClientDebugView`** — Unity `MonoBehaviour` debug-панели клиента. Связывает input fields, toggle и buttons с `ClientDebugController` и отображает endpoint, состояние соединения, последний request и события. На сцене висит на `ClientDebug` внутри каждого окна игрока.
 

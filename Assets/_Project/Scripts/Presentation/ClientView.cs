@@ -56,10 +56,12 @@ namespace Battleships.Presentation
             var state = client.State;
             playerNumber.text = state.HasIdentity
                 ? state.PlayerSlot == PlayerSlot.PlayerOne ? "Player 1" : "Player 2"
-                : "Waiting";
+                : "Player -";
             var connected = client.Connection.IsConnected;
             var turnText = connected ? state.IsYourTurn ? "Your turn" : "Waiting"
-                : client.Connection.State == ClientConnectionState.Resuming ? "Resuming" : "Connection lost";
+                : client.Connection.State == ClientConnectionState.Resuming ? "Resuming"
+                : client.Connection.State == ClientConnectionState.Connecting ? "Connecting"
+                : client.Connection.State == ClientConnectionState.Disconnected ? "Disconnected" : "Connection lost";
             SetStatusText(yourTurn, turnText, connected && state.IsYourTurn);
             matchStatus.text = MatchStatusText(state.MatchStatus);
             stateVersion.text = state.StateVersion > 0 ? $"v{state.StateVersion}" : "v0";

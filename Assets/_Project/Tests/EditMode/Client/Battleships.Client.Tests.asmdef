@@ -7,7 +7,8 @@
         "Battleships.Networking",
         "Battleships.Networking.Integration",
         "Battleships.Server",
-        "Battleships.Client"
+        "Battleships.Client",
+        "Battleships.Presentation"
     ],
     "includePlatforms": ["Editor"],
     "optionalUnityReferences": ["TestAssemblies"]

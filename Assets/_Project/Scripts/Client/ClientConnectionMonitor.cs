@@ -6,7 +6,9 @@ namespace Battleships.Client
     {
         Connected,
         ConnectionLost,
-        Resuming
+        Resuming,
+        Disconnected,
+        Connecting
     }
 
     public sealed class ClientConnectionMonitor
@@ -15,7 +17,7 @@ namespace Battleships.Client
         private double lastServerMessageMilliseconds;
         private double resumingSinceMilliseconds;
 
-        public ClientConnectionState State { get; private set; } = ClientConnectionState.ConnectionLost;
+        public ClientConnectionState State { get; private set; } = ClientConnectionState.Disconnected;
         public bool IsConnected => State == ClientConnectionState.Connected;
         public EndpointIdentity Endpoint { get; private set; }
 
@@ -31,7 +33,7 @@ namespace Battleships.Client
         {
             Endpoint = endpoint;
             lastServerMessageMilliseconds = nowMilliseconds;
-            State = ClientConnectionState.Connected;
+            State = ClientConnectionState.Disconnected;
             return true;
         }
 
@@ -41,6 +43,12 @@ namespace Battleships.Client
             if (State == ClientConnectionState.Resuming) return false;
             State = ClientConnectionState.Resuming;
             return true;
+        }
+
+        internal void BeginConnecting(double nowMilliseconds)
+        {
+            resumingSinceMilliseconds = nowMilliseconds;
+            State = ClientConnectionState.Connecting;
         }
 
         internal void ObserveServerMessage(double nowMilliseconds) =>
@@ -56,8 +64,8 @@ namespace Battleships.Client
 
         internal bool Evaluate(double nowMilliseconds)
         {
-            if (State == ClientConnectionState.ConnectionLost) return false;
-            var reference = State == ClientConnectionState.Resuming
+            if (State == ClientConnectionState.ConnectionLost || State == ClientConnectionState.Disconnected) return false;
+            var reference = State == ClientConnectionState.Resuming || State == ClientConnectionState.Connecting
                 ? System.Math.Max(lastServerMessageMilliseconds, resumingSinceMilliseconds)
                 : lastServerMessageMilliseconds;
             if (nowMilliseconds - reference <= timeoutMilliseconds) return false;
@@ -65,6 +73,6 @@ namespace Battleships.Client
             return true;
         }
 
-        internal void Unregister() => State = ClientConnectionState.ConnectionLost;
+        internal void Unregister() => State = ClientConnectionState.Disconnected;
     }
 }

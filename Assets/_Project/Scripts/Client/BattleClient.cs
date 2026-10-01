@@ -12,6 +12,8 @@ namespace Battleships.Client
         private ClientTransportEndpoint endpoint;
         private bool disposed;
         private bool resumePending;
+        private string initialJoinRequestId;
+        private MatchSnapshot deferredInitialSnapshot;
 
         public ClientState State { get; } = new ClientState();
         public ClientConnectionMonitor Connection { get; }
@@ -46,10 +48,23 @@ namespace Battleships.Client
             StateChanged?.Invoke();
         }
 
+        public void Connect()
+        {
+            if (sessionIdentity.HasSession) Resume();
+            else Join();
+        }
+
         public void Join()
         {
             EnsureReady();
-            Send(new JoinRequest { RequestId = NextRequestId() });
+            if (sessionIdentity.HasSession)
+                throw new InvalidOperationException("An existing session must use Resume.");
+            initialJoinRequestId = initialJoinRequestId ?? NextRequestId();
+            LastRequestId = initialJoinRequestId;
+            Connection.BeginConnecting(Now());
+            RuntimeEvent?.Invoke("Join sent");
+            StateChanged?.Invoke();
+            Send(new JoinRequest { RequestId = initialJoinRequestId });
         }
 
         public void Resume()
@@ -142,16 +157,33 @@ namespace Battleships.Client
             switch (delivery.Message)
             {
                 case JoinResponse response:
+                    if (initialJoinRequestId != null && response.RequestId != initialJoinRequestId) break;
                     if (sessionIdentity.Apply(response) && State.ApplyJoin(response))
                     {
                         Connection.ObserveServerMessage(now);
+                        if (!resumePending) Connection.CompleteSynchronization(now);
+                        if (deferredInitialSnapshot != null)
+                        {
+                            if (deferredInitialSnapshot.PlayerSlot == sessionIdentity.PlayerSlot)
+                                State.ApplySnapshot(deferredInitialSnapshot);
+                            deferredInitialSnapshot = null;
+                        }
                         RuntimeEvent?.Invoke("Joined match");
                         StateChanged?.Invoke();
                     }
                     break;
                 case MatchSnapshot snapshot:
-                    if (sessionIdentity.HasSession && snapshot != null &&
-                        snapshot.PlayerSlot != sessionIdentity.PlayerSlot) break;
+                    if (snapshot == null) break;
+                    if (!sessionIdentity.HasSession)
+                    {
+                        // Jitter may deliver the initial snapshot before its JoinResponse.
+                        // Keep it private until the server-assigned identity is confirmed.
+                        if (initialJoinRequestId != null && (deferredInitialSnapshot == null ||
+                            snapshot.StateVersion >= deferredInitialSnapshot.StateVersion))
+                            deferredInitialSnapshot = snapshot;
+                        break;
+                    }
+                    if (snapshot.PlayerSlot != sessionIdentity.PlayerSlot) break;
                     Connection.ObserveServerMessage(now);
                     var resuming = resumePending;
                     if (State.ApplySnapshot(snapshot, resuming))
@@ -180,6 +212,20 @@ namespace Battleships.Client
                     break;
                 case ErrorResponse response:
                     Connection.ObserveServerMessage(now);
+                    if (resumePending && response.RequestId == LastRequestId &&
+                        response.ErrorCode == ProtocolErrorCode.MatchNotReady)
+                    {
+                        State.ApplyJoin(new JoinResponse
+                        {
+                            SessionToken = sessionIdentity.SessionToken,
+                            PlayerSlot = sessionIdentity.PlayerSlot
+                        });
+                        resumePending = false;
+                        Connection.CompleteSynchronization(now);
+                        RuntimeEvent?.Invoke("Session restored; waiting for players");
+                        StateChanged?.Invoke();
+                        break;
+                    }
                     RuntimeEvent?.Invoke($"Request rejected: {response.ErrorCode}");
                     break;
                 case HeartbeatResponse _:

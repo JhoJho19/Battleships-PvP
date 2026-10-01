@@ -34,7 +34,7 @@ namespace Battleships.Presentation
         {
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-            if (!client.Connection.IsConnected || client.Connection.Endpoint != endpoint.Identity)
+            if (client.Connection.Endpoint != endpoint.Identity)
                 throw new InvalidOperationException("The debug endpoint is not attached to this client.");
 
             client.StateChanged += NotifyChanged;
@@ -89,12 +89,7 @@ namespace Battleships.Presentation
         {
             SetDeliveryEnabled(true);
             AddRecentEvent("Delivery restored");
-            if (!CanResume)
-            {
-                AddRecentEvent("No joined session to resume");
-                return;
-            }
-            client.Resume();
+            client.Connect();
         }
 
         public void SetNetworkLogEnabled(bool enabled)
@@ -182,6 +177,8 @@ namespace Battleships.Presentation
                 case ClientConnectionState.Connected: return "Connected";
                 case ClientConnectionState.ConnectionLost: return "Connection lost";
                 case ClientConnectionState.Resuming: return "Resuming";
+                case ClientConnectionState.Disconnected: return "Disconnected";
+                case ClientConnectionState.Connecting: return "Connecting";
                 default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
         }

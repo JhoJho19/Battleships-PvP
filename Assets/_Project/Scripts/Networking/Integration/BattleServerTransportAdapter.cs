@@ -97,7 +97,16 @@ namespace Battleships.Networking.Integration
         {
             var result = server.Handle(request);
             sender.Send(endpoint, Select(result));
-            if (!result.IsSuccess) return;
+            if (!result.IsSuccess)
+            {
+                // A valid player can resume before the second join creates a match.
+                if (result.Error.ErrorCode == ProtocolErrorCode.MatchNotReady)
+                {
+                    sessions[endpoint.EndpointId] = new EndpointSession(endpoint, request.SessionToken);
+                    PublishWaitingStatus();
+                }
+                return;
+            }
             sessions[endpoint.EndpointId] = new EndpointSession(endpoint, request.SessionToken);
             PublishStatus(result.Response);
         }

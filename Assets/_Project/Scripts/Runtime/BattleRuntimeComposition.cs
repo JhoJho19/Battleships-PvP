@@ -54,15 +54,13 @@ namespace Battleships.Runtime
             clientOneIdentity = new ClientSessionIdentity();
             clientTwoIdentity = new ClientSessionIdentity();
             clientOneRuntime = CreateClientRuntime(ClientEndpointId.ClientA, clientOneIdentity,
-                clientOneView, clientOneDebugView, new NetworkSettings(), true);
+                clientOneView, clientOneDebugView, new NetworkSettings(silentlyDisconnected: true), true);
             clientTwoRuntime = CreateClientRuntime(ClientEndpointId.ClientB, clientTwoIdentity,
-                clientTwoView, clientTwoDebugView, new NetworkSettings(), true);
+                clientTwoView, clientTwoDebugView, new NetworkSettings(silentlyDisconnected: true), true);
             RenderServerStatus(adapter.Status);
             transportLogView.Render(transport.Log);
 
             lastTransportRealtime = Time.realtimeSinceStartupAsDouble;
-            clientOneRuntime.Client.Join();
-            clientTwoRuntime.Client.Join();
             ProcessServerDeadlinesAsync(lifetimeCancellation.Token).Forget();
             RefreshTimersAsync(lifetimeCancellation.Token).Forget();
         }
