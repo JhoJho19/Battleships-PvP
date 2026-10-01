@@ -108,9 +108,16 @@ namespace Battleships.Tests
                 AssertAccepted(GameRules.Fire(match, PlayerId.One, ship.Positions[i]),
                                i == ship.Positions.Count - 1 ? ShotResult.sunk : ShotResult.hit);
                 Assert.That(match.CurrentPlayer, Is.EqualTo(PlayerId.Two));
-                if (i < ship.Positions.Count - 1) ReplyWithMiss();
+                if (i < ship.Positions.Count - 1)
+                {
+                    Assert.That(match.PlayerTwo.Board.GetCell(ship.Positions[i]).Shot,
+                        Is.EqualTo(ShotResult.hit));
+                    ReplyWithMiss();
+                }
             }
             Assert.That(ship.IsSunk, Is.True);
+            foreach (var position in ship.Positions)
+                Assert.That(match.PlayerTwo.Board.GetCell(position).Shot, Is.EqualTo(ShotResult.sunk));
             Assert.That(match.Winner, Is.Null);
         }
 

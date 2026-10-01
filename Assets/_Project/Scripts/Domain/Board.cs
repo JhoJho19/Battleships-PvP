@@ -79,6 +79,9 @@ namespace Battleships.Domain
             {
                 ship.Hit(position);
                 result = ship.IsSunk ? ShotResult.sunk : ShotResult.hit;
+                if (ship.IsSunk)
+                    foreach (var shipPosition in ship.Positions)
+                        shots[shipPosition.X, shipPosition.Y] = ShotResult.sunk;
             }
             shots[position.X, position.Y] = result;
             return result;

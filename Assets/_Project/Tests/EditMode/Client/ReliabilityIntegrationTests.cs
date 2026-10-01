@@ -182,6 +182,44 @@ namespace Battleships.Tests.Client
         }
 
         [Test]
+        public void SinkingShipPromotesEveryConfirmedCellOnBothClientBoards()
+        {
+            var expected = GameRules.CreateMatch(new GameRulesConfig(6, 3, 2, 2, 1), new Random(104));
+            var ship = expected.PlayerTwo.Board.Ships.First(candidate => candidate.Positions.Count > 1);
+            var replyTargets = expected.PlayerOne.Board.Ships
+                .SelectMany(candidate => candidate.Positions)
+                .Take(ship.Positions.Count - 1)
+                .ToArray();
+
+            for (var i = 0; i < ship.Positions.Count; i++)
+            {
+                var target = new ClientPosition(ship.Positions[i].X, ship.Positions[i].Y);
+                Assert.That(clientA.TryFire(target), Is.True);
+                transport.ProcessPending();
+
+                if (i == ship.Positions.Count - 1) continue;
+
+                foreach (var confirmedHit in ship.Positions.Take(i + 1))
+                {
+                    var position = new ClientPosition(confirmedHit.X, confirmedHit.Y);
+                    Assert.That(clientA.State.OpponentShots[position], Is.EqualTo(ShotResultCode.Hit));
+                    Assert.That(clientB.State.OwnBoard[position].ShotResult, Is.EqualTo(ShotResultCode.Hit));
+                }
+
+                var reply = new ClientPosition(replyTargets[i].X, replyTargets[i].Y);
+                Assert.That(clientB.TryFire(reply), Is.True);
+                transport.ProcessPending();
+            }
+
+            foreach (var sunkCell in ship.Positions)
+            {
+                var position = new ClientPosition(sunkCell.X, sunkCell.Y);
+                Assert.That(clientA.State.OpponentShots[position], Is.EqualTo(ShotResultCode.Sunk));
+                Assert.That(clientB.State.OwnBoard[position].ShotResult, Is.EqualTo(ShotResultCode.Sunk));
+            }
+        }
+
+        [Test]
         public void DuplicateAndLateFireResponsesDoNotResolveOrChangeANewerPendingOperation()
         {
             endpointA.Configure(new NetworkSettings(duplicateRate: 1));
