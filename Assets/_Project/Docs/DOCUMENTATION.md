@@ -15,3 +15,8 @@
 UniTask loop и рассылку персональных snapshot только после фактической смены состояния. Клиентский
 таймер остаётся только отображением абсолютного server deadline. Heartbeat scheduling и reconnect
 остаются следующими этапами `PLAN.md`.
+
+Этап 4.8 подключает подготовленные debug panels к endpoint-specific `NetworkSettings`, silent
+disconnect/connect и фильтрации существующего transport log. `ClientDebugView` владеет четырьмя
+runtime-полями debug panel и существующими сетевыми controls, а `ClientDebugController` содержит
+тестируемую валидацию и преобразование процентов. Полное client recreation/resume остаётся этапом 4.9.

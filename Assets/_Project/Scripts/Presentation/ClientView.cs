@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Battleships.Client;
-using Battleships.Networking;
 using Battleships.Protocol;
 using TMPro;
 using UnityEngine;
@@ -19,14 +17,9 @@ namespace Battleships.Presentation
         [SerializeField] private TMP_Text turnId;
         [SerializeField] private TMP_Text timer;
         [SerializeField] private TMP_Text pendingRequest;
-        [SerializeField] private TMP_Text endpoint;
-        [SerializeField] private TMP_Text connected;
-        [SerializeField] private TMP_Text lastRequestId;
-        [SerializeField] private TMP_Text recentEvents;
         [SerializeField] private BoardView ownBoard;
         [SerializeField] private BoardView opponentBoard;
 
-        private readonly Queue<string> events = new Queue<string>();
         private BattleClient client;
 
         public void Bind(BattleClient battleClient, int configuredBoardSize)
@@ -36,7 +29,6 @@ namespace Battleships.Presentation
             ownBoard.Initialize(configuredBoardSize, null);
             opponentBoard.Initialize(configuredBoardSize, Fire);
             client.StateChanged += Render;
-            client.RuntimeEvent += AddEvent;
             Render();
         }
 
@@ -72,30 +64,14 @@ namespace Battleships.Presentation
             pendingRequest.text = state.PendingShot == null
                 ? string.Empty
                 : $"Fire {state.PendingShot.Target}\nRequest #{ShortId(state.PendingShot.RequestId)}";
-            endpoint.text = client.Connection.IsConnected
-                ? $"{FriendlyEndpoint(client.Connection.Endpoint.EndpointId)} / gen {client.Connection.Endpoint.Generation}"
-                : "Not registered";
-            SetStatusText(connected, client.Connection.IsConnected ? "Yes" : "No",
-                client.Connection.IsConnected);
-            lastRequestId.text = string.IsNullOrWhiteSpace(client.LastRequestId)
-                ? "-"
-                : $"#{ShortId(client.LastRequestId)}";
             ownBoard.Render(state);
             opponentBoard.Render(state);
-        }
-
-        private void AddEvent(string value)
-        {
-            if (events.Count == 5) events.Dequeue();
-            events.Enqueue(value);
-            recentEvents.text = string.Join("\n", events);
         }
 
         private void Unbind()
         {
             if (client == null) return;
             client.StateChanged -= Render;
-            client.RuntimeEvent -= AddEvent;
             client = null;
         }
 
@@ -111,9 +87,6 @@ namespace Battleships.Presentation
                 default: throw new ArgumentOutOfRangeException(nameof(status), status, null);
             }
         }
-
-        private static string FriendlyEndpoint(ClientEndpointId id) =>
-            id == ClientEndpointId.ClientA ? "Client A" : "Client B";
 
         private static string ShortId(string requestId) =>
             requestId.Length <= 8 ? requestId : requestId.Substring(0, 8);

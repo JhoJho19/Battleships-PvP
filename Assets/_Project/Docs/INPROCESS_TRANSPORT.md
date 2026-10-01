@@ -31,6 +31,7 @@ called, so later mutation of the original DTO cannot affect a pending delivery.
 - `ClientTransportEndpoint.Send(...)` for Client -> Server;
 - `IServerTransportSender.Send(...)` for Server -> Client;
 - endpoint-specific `NetworkSettings`;
+- explicit endpoint-specific settings reads and runtime logging enable/disable;
 - `ProcessPending()` and `AdvanceTimeBy(...)` for deterministic scheduling;
 - `Reset()` and `Dispose()` for explicit cleanup.
 
@@ -81,6 +82,10 @@ status and an optional drop reason. Status semantics are:
 
 Drop reasons are `Loss`, `Disconnected` and `StaleEndpoint`. The logger does not parse request IDs or
 other business fields.
+
+Logging can be disabled independently for an active endpoint. While disabled, newly produced log
+events for that endpoint are not appended, but delivery and the existing shared log remain unchanged.
+Re-enabling resumes recording without reconstructing events that happened while logging was disabled.
 
 ## Verification
 

@@ -63,3 +63,33 @@ received the same updated turn/version/deadline projection. The Console containe
 
 The transport log view formats the existing `InProcessTransport.Log` entries and does not inspect
 gameplay DTO contents.
+
+## Stage 4.8 debug controls
+
+The two existing `ClientDebug` hierarchies are bound by separate `ClientDebugView` instances. Each
+view owns Endpoint, Connected, Last Request Id and Recent Events plus the prepared latency, jitter,
+loss, duplicate, Network Log, Disconnect, Connect and Recreate Client controls. Recent Events remains
+client-local and is not populated from the shared transport log.
+
+`ClientDebugController` validates the text inputs, clamps milliseconds to `>= 0`, clamps percentage
+inputs to `0..100`, converts percentages to transport rates in `0..1` and replaces the immutable
+settings of only its own endpoint. Empty and non-numeric values become zero. Disconnect and Connect
+only toggle `SilentlyDisconnected`; they do not unregister the endpoint, alter the server session or
+recover previously dropped messages. The Connected display describes this manual delivery switch,
+not heartbeat state.
+
+Runtime transport time advances through a cancellable UniTask pump only while deliveries are pending.
+This makes configured latency and jitter observable without a permanent `Update` loop. Scene restart
+explicitly cancels runtime tasks, unbinds views, disposes clients, registrations and transport queues,
+then reloads the active scene.
+
+The Recreate Client buttons call the composition-level recreation entry point and show that recovery
+is reserved for stage 4.9. They intentionally do not destroy or replace the client yet because correct
+recreation requires independent `SessionToken` storage and Resume recovery.
+
+Stage 4.8 verification in Unity 6000.3.10f1 passed the controller-focused EditMode suite 4/4 and the
+full EditMode suite 81/81. Play Mode verified Pending under latency, jittered delivery, real loss and
+duplicate log entries, endpoint-local silent disconnect/connect, continued server deadlines and the
+other endpoint, endpoint-local log suppression/resumption, and scene restart with a pending delayed
+delivery. The new runtime initialized cleanly and no old delivery reached it. No gameplay/lifecycle
+errors were logged; the final Play Mode run exited with no Console errors or warnings.

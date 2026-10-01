@@ -61,6 +61,7 @@
   <Project Path="Battleships.Configuration.csproj" />
   <Project Path="Battleships.Runtime.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
+  <Project Path="Battleships.Presentation.Tests.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
   <Project Path="Battleships.Rules.Tests.csproj" />
   <Project Path="Battleships.Networking.Integration.csproj" />

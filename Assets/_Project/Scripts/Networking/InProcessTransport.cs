@@ -59,6 +59,24 @@ namespace Battleships.Networking
             GetCurrent(identity).Configure(settings);
         }
 
+        public NetworkSettings GetSettings(EndpointIdentity identity)
+        {
+            ThrowIfDisposed();
+            return GetCurrent(identity).Settings;
+        }
+
+        public bool IsLoggingEnabled(EndpointIdentity identity)
+        {
+            ThrowIfDisposed();
+            return GetCurrent(identity).LoggingEnabled;
+        }
+
+        public void SetLoggingEnabled(EndpointIdentity identity, bool enabled)
+        {
+            ThrowIfDisposed();
+            GetCurrent(identity).LoggingEnabled = enabled;
+        }
+
         public void Send(EndpointIdentity destination, object message)
         {
             ThrowIfDisposed();
@@ -120,14 +138,16 @@ namespace Battleships.Networking
             if (!endpoints.TryGetValue(identity.EndpointId, out var registration) ||
                 registration.Identity != identity) return;
 
+            var loggingEnabled = registration.LoggingEnabled;
             endpoints.Remove(identity.EndpointId);
             for (var i = pending.Count - 1; i >= 0; i--)
             {
                 if (pending[i].Endpoint != identity) continue;
                 var removed = pending[i];
                 pending.RemoveAt(i);
-                AddLog(removed.Endpoint, removed.Direction, removed.MessageType,
-                    TransportLogStatus.Dropped, TransportDropReason.StaleEndpoint);
+                if (loggingEnabled)
+                    AddLogDirect(removed.Endpoint, removed.Direction, removed.MessageType,
+                        TransportLogStatus.Dropped, TransportDropReason.StaleEndpoint);
             }
         }
 
@@ -234,6 +254,14 @@ namespace Battleships.Networking
             endpoints.TryGetValue(identity.EndpointId, out registration) && registration.Identity == identity;
 
         private void AddLog(EndpointIdentity endpoint, TransportDirection direction, string messageType,
+            TransportLogStatus status, TransportDropReason dropReason = TransportDropReason.None)
+        {
+            if (endpoints.TryGetValue(endpoint.EndpointId, out var registration) &&
+                registration.Identity == endpoint && !registration.LoggingEnabled) return;
+            AddLogDirect(endpoint, direction, messageType, status, dropReason);
+        }
+
+        private void AddLogDirect(EndpointIdentity endpoint, TransportDirection direction, string messageType,
             TransportLogStatus status, TransportDropReason dropReason = TransportDropReason.None) =>
             log.Add(new TransportLogEntry(endpoint, direction, messageType, status, dropReason,
                 CurrentTimeMilliseconds));
@@ -254,6 +282,7 @@ namespace Battleships.Networking
             public ITransportMessageReceiver Receiver { get; }
             public NetworkSettings Settings { get; private set; }
             public Random Random { get; private set; }
+            public bool LoggingEnabled { get; set; } = true;
 
             public EndpointRegistration(EndpointIdentity identity, NetworkSettings settings,
                 ITransportMessageReceiver receiver)
@@ -319,6 +348,29 @@ namespace Battleships.Networking
         {
             this.owner = owner;
             Identity = identity;
+        }
+
+        public NetworkSettings Settings
+        {
+            get
+            {
+                if (owner == null) throw new ObjectDisposedException(nameof(ClientTransportEndpoint));
+                return owner.GetSettings(Identity);
+            }
+        }
+
+        public bool LoggingEnabled
+        {
+            get
+            {
+                if (owner == null) throw new ObjectDisposedException(nameof(ClientTransportEndpoint));
+                return owner.IsLoggingEnabled(Identity);
+            }
+            set
+            {
+                if (owner == null) throw new ObjectDisposedException(nameof(ClientTransportEndpoint));
+                owner.SetLoggingEnabled(Identity, value);
+            }
         }
 
         public void Send(object message)

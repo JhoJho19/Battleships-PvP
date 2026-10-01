@@ -3838,6 +3838,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 458209424}
+  - component: {fileID: 458209425}
   m_Layer: 5
   m_Name: ClientDebug
   m_TagString: Untagged
@@ -3868,6 +3869,30 @@ RectTransform:
   m_AnchoredPosition: {x: -265.20065, y: -385.40002}
   m_SizeDelta: {x: 227.8587, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &458209425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 458209423}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19d6c4f763200be45bccaf7b2f9b626a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.ClientDebugView
+  endpoint: {fileID: 1426365347}
+  connected: {fileID: 968766646}
+  lastRequestId: {fileID: 1497916872}
+  recentEvents: {fileID: 1435801007}
+  latency: {fileID: 2135588019}
+  jitter: {fileID: 887871642}
+  loss: {fileID: 2044359635}
+  duplicate: {fileID: 1307956664}
+  networkLog: {fileID: 579443634}
+  disconnect: {fileID: 1226350197}
+  connect: {fileID: 315637999}
+  recreateClient: {fileID: 1317157895}
 --- !u!1 &470398024
 GameObject:
   m_ObjectHideFlags: 0
@@ -6358,10 +6383,6 @@ MonoBehaviour:
   turnId: {fileID: 1729124757}
   timer: {fileID: 2007645352}
   pendingRequest: {fileID: 1913786253}
-  endpoint: {fileID: 1426365347}
-  connected: {fileID: 968766646}
-  lastRequestId: {fileID: 1497916872}
-  recentEvents: {fileID: 1435801007}
   ownBoard: {fileID: 18987461}
   opponentBoard: {fileID: 936615546}
 --- !u!1 &822285963
@@ -11943,6 +11964,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1478090243}
+  - component: {fileID: 1478090244}
   m_Layer: 5
   m_Name: ClientDebug
   m_TagString: Untagged
@@ -11973,6 +11995,30 @@ RectTransform:
   m_AnchoredPosition: {x: -265.20065, y: -385.40002}
   m_SizeDelta: {x: 227.8587, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1478090244
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1478090242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19d6c4f763200be45bccaf7b2f9b626a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.ClientDebugView
+  endpoint: {fileID: 1736193375}
+  connected: {fileID: 208836783}
+  lastRequestId: {fileID: 474874954}
+  recentEvents: {fileID: 578181969}
+  latency: {fileID: 1736327326}
+  jitter: {fileID: 1796378412}
+  loss: {fileID: 723924177}
+  duplicate: {fileID: 1611479478}
+  networkLog: {fileID: 1415898878}
+  disconnect: {fileID: 1355822619}
+  connect: {fileID: 1594325039}
+  recreateClient: {fileID: 419720290}
 --- !u!1 &1497916870
 GameObject:
   m_ObjectHideFlags: 0
@@ -12491,10 +12537,6 @@ MonoBehaviour:
   turnId: {fileID: 719762135}
   timer: {fileID: 750169285}
   pendingRequest: {fileID: 882502927}
-  endpoint: {fileID: 1736193375}
-  connected: {fileID: 208836783}
-  lastRequestId: {fileID: 474874954}
-  recentEvents: {fileID: 578181969}
   ownBoard: {fileID: 1727461112}
   opponentBoard: {fileID: 158349124}
 --- !u!1 &1591386075
@@ -15372,9 +15414,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Reconnect
-
-'
+  m_text: Recreate Client
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -16321,9 +16361,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Reconnect
-
-'
+  m_text: Recreate Client
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -16435,8 +16473,11 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 9d2d9c3f4467c9040aff9109438ef3fe, type: 2}
   clientOneView: {fileID: 798185922}
   clientTwoView: {fileID: 1561207968}
+  clientOneDebugView: {fileID: 458209425}
+  clientTwoDebugView: {fileID: 1478090244}
   serverStatusView: {fileID: 582204315}
   transportLogView: {fileID: 1057090291}
+  restartSceneButton: {fileID: 1625588591}
   placementSeed: 46
 --- !u!4 &2087278006
 Transform:
