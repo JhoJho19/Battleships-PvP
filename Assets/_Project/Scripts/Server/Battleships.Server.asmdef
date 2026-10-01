@@ -1,7 +1,7 @@
 {
     "name": "Battleships.Server",
     "rootNamespace": "Battleships.Server",
-    "references": ["Battleships.Domain", "Battleships.Protocol", "Battleships.Networking"],
+    "references": ["Battleships.Domain", "Battleships.Protocol"],
     "autoReferenced": false,
     "noEngineReferences": true
 }

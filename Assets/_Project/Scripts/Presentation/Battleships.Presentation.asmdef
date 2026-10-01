@@ -1,6 +1,12 @@
 {
     "name": "Battleships.Presentation",
     "rootNamespace": "Battleships.Presentation",
-    "references": ["Battleships.Client", "Battleships.Configuration"],
+    "references": [
+        "Battleships.Client",
+        "Battleships.Protocol",
+        "Battleships.Networking",
+        "Unity.TextMeshPro",
+        "Unity.ugui"
+    ],
     "autoReferenced": false
 }

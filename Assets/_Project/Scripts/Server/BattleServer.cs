@@ -38,12 +38,21 @@ namespace Battleships.Server
         {
             if (request == null || string.IsNullOrWhiteSpace(request.RequestId))
                 return ServerResult<MatchSnapshot>.Failure(request?.RequestId, ProtocolErrorCode.InvalidRequest);
-            if (!sessions.TryResolve(request.SessionToken, out var session))
-                return ServerResult<MatchSnapshot>.Failure(request.RequestId, ProtocolErrorCode.InvalidSession);
+            var result = GetSnapshot(request.SessionToken);
+            return result.IsSuccess
+                ? result
+                : ServerResult<MatchSnapshot>.Failure(request.RequestId, result.Error.ErrorCode);
+        }
+
+        // Server-side transport adapters use this read-only projection API for push snapshots.
+        // It never exposes MatchState and always builds a recipient-specific protocol DTO.
+        public ServerResult<MatchSnapshot> GetSnapshot(string sessionToken)
+        {
+            if (!sessions.TryResolve(sessionToken, out var session))
+                return ServerResult<MatchSnapshot>.Failure(null, ProtocolErrorCode.InvalidSession);
             var match = matches.Resolve(session);
             if (match == null)
-                return ServerResult<MatchSnapshot>.Failure(request.RequestId, ProtocolErrorCode.MatchNotReady);
-            // Resume is a read of current state, not an idempotent user mutation.
+                return ServerResult<MatchSnapshot>.Failure(null, ProtocolErrorCode.MatchNotReady);
             return ServerResult<MatchSnapshot>.Success(snapshots.Build(match, session.Player));
         }
 

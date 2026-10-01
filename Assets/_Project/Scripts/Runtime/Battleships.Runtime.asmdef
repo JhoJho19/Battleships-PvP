@@ -1,0 +1,16 @@
+{
+    "name": "Battleships.Runtime",
+    "rootNamespace": "Battleships.Runtime",
+    "references": [
+        "Battleships.Domain",
+        "Battleships.Protocol",
+        "Battleships.Configuration",
+        "Battleships.Networking",
+        "Battleships.Networking.Integration",
+        "Battleships.Server",
+        "Battleships.Client",
+        "Battleships.Presentation",
+        "UniTask"
+    ],
+    "autoReferenced": false
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Battleships.Client.Tests",
+    "rootNamespace": "Battleships.Tests.Client",
+    "references": [
+        "Battleships.Protocol",
+        "Battleships.Networking",
+        "Battleships.Client"
+    ],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}

@@ -1,0 +1,7 @@
+{
+    "name": "Battleships.Networking.Integration",
+    "rootNamespace": "Battleships.Networking.Integration",
+    "references": ["Battleships.Protocol", "Battleships.Networking", "Battleships.Server"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

@@ -1,0 +1,13 @@
+{
+    "name": "Battleships.Networking.Tests",
+    "rootNamespace": "Battleships.Tests.Networking",
+    "references": [
+        "Battleships.Domain",
+        "Battleships.Protocol",
+        "Battleships.Networking",
+        "Battleships.Server",
+        "Battleships.Networking.Integration"
+    ],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}
