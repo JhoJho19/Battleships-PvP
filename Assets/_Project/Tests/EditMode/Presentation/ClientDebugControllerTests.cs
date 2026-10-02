@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Battleships.Client;
 using Battleships.Networking;
 using Battleships.Presentation;
@@ -136,6 +138,38 @@ namespace Battleships.Tests.Presentation
             Assert.That(controllerA.RecentEventsText, Does.Contain("Client recreation requested"));
             Assert.That(controllerB.RecentEventsText, Is.Empty);
             Assert.That(requested, Is.EqualTo(new[] { ClientEndpointId.ClientA }));
+        }
+
+        [Test]
+        public void RecentEventsRetainScrollableChronologicalHistoryAndStableLocalTimestamps()
+        {
+            var before = DateTimeOffset.Now;
+            for (var i = 0; i < 30; i++) controllerA.ReportRuntimeEvent($"Event {i}");
+            var after = DateTimeOffset.Now;
+            var rendered = controllerA.RecentEventsText;
+            var lines = rendered.Split('\n');
+            Assert.That(lines.Length, Is.EqualTo(30));
+            for (var i = 0; i < lines.Length; i++)
+            {
+                Assert.That(lines[i], Does.Match(@"^\[\d{2}:\d{2}:\d{2}\] Event " + i + "$"));
+                var time = DateTime.ParseExact(lines[i].Substring(1, 8), "HH:mm:ss",
+                    CultureInfo.InvariantCulture).TimeOfDay;
+                // Compare at displayed second precision, allowing a midnight boundary.
+                var firstSecond = new TimeSpan(before.Hour, before.Minute, before.Second);
+                var lastSecond = new TimeSpan(after.Hour, after.Minute, after.Second);
+                Assert.That(firstSecond <= lastSecond
+                    ? time >= firstSecond && time <= lastSecond
+                    : time >= firstSecond || time <= lastSecond, Is.True);
+            }
+            controllerA.SetLatency("10");
+            Assert.That(controllerA.RecentEventsText, Is.EqualTo(rendered));
+            Assert.That(controllerB.RecentEventsText, Is.Empty);
+
+            for (var i = 30; i < 205; i++) controllerA.ReportRuntimeEvent($"Event {i}");
+            lines = controllerA.RecentEventsText.Split('\n');
+            Assert.That(lines.Length, Is.EqualTo(200));
+            Assert.That(lines[0], Does.EndWith("Event 5"));
+            Assert.That(lines[199], Does.EndWith("Event 204"));
         }
 
         private sealed class RecordingReceiver : ITransportMessageReceiver

@@ -111,6 +111,8 @@ namespace Battleships.Networking
         public TransportLogStatus Status { get; }
         public TransportDropReason DropReason { get; }
         public double TimestampMilliseconds { get; }
+        // Diagnostic wall clock only; scheduling and deterministic tests use TimestampMilliseconds.
+        public DateTimeOffset LocalTimestamp { get; }
 
         internal TransportLogEntry(EndpointIdentity endpoint, TransportDirection direction,
             string messageType, TransportLogStatus status, TransportDropReason dropReason,
@@ -122,6 +124,7 @@ namespace Battleships.Networking
             Status = status;
             DropReason = dropReason;
             TimestampMilliseconds = timestampMilliseconds;
+            LocalTimestamp = DateTimeOffset.Now;
         }
     }
 

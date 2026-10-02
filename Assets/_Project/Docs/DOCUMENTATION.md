@@ -18,6 +18,14 @@
 
 Транспорт работает с сериализованными копиями сообщений и не знает правил игры. Для каждого клиента отдельно можно настроить latency, jitter, loss, duplication и silent disconnect. Очередь доставки обрабатывается явно, поэтому сетевые сценарии можно воспроизводить детерминированно в EditMode-тестах.
 
+`Domain` правила и данные самой игры Board, Ship, GameRules
+`Protocol` формы сообщений между клиентом и сервером FireRequest, FireResponse
+`Server` принимает запросы и управляет матчем BattleServer, MatchService
+`Networking` пересылает сообщения InProcessTransport
+`Client` управляет действиями и состоянием одного клиента BattleClient, ClientState
+`Presentation` показывает данные на экране и принимает нажатия ClientView, BoardView, CellView
+`Runtime` создаёт объекты и соединяет их BattleRuntimeComposition
+
 ## Запуск сцены и ручное подключение
 
 При входе в Play Mode `BattleRuntimeComposition` создаёт один `BattleServer`, один `InProcessTransport`, два client runtime и связывает их с существующими UI. Начальные endpoint имеют выключенную доставку; клиенты находятся в `Disconnected`, без `SessionToken` и назначенной игровой роли. Оба окна показывают `Player -`, таймер — `00 : 00`, сервер — `Connected Clients: 0/2` и `Waiting for Players`, без version, текущего хода и TurnId. Игровые действия недоступны до получения сессии и активного snapshot.
@@ -134,7 +142,7 @@
 
 **`TransportDelivery`** — уже доставленное сообщение вместе с endpoint, направлением, стабильным идентификатором типа и десериализованным объектом сообщения.
 
-**`TransportLogEntry`** — одна запись журнала транспорта. Содержит endpoint, направление, тип сообщения, статус, причину отбрасывания и транспортное время.
+**`TransportLogEntry`** — одна запись журнала транспорта. Содержит endpoint, направление, тип сообщения, статус, причину отбрасывания и транспортное время `TimestampMilliseconds`, которое по-прежнему используется для детерминированных проверок. Дополнительный `LocalTimestamp` сохраняет локальное wall-clock время в момент создания записи и служит только для диагностического отображения; доставка, планирование и fault simulation от него не зависят.
 
 **`ProtocolMessageTypes`** — статический allow-list корневых Protocol-сообщений, которые разрешено сериализовать через текущий транспорт.
 
@@ -178,13 +186,17 @@
 
 **`ClientView`** — Unity `MonoBehaviour` основного окна игрока. Показывает номер игрока, связь, статус матча, ход, version, timer, pending request и обе доски. На сцене висит на `Canvas/UI/ImagePlayerWindow` и `Canvas/UI/ImagePlayerWindow (1)`.
 
-**`ClientDebugController`** — обычный C#-контроллер debug-панели. Проверяет и применяет сетевые параметры, включает и выключает доставку и лог, вызывает единый Connect (Join или Resume в зависимости от identity), запрашивает recreation и хранит последние runtime-события. Не висит на сцене, а создаётся `BattleRuntimeComposition` отдельно для каждого клиента.
+**`ClientDebugController`** — обычный C#-контроллер debug-панели. Проверяет и применяет сетевые параметры, включает и выключает доставку и лог, вызывает единый Connect (Join или Resume в зависимости от identity), запрашивает recreation и хранит до 200 последних runtime-событий в порядке добавления. Каждое событие получает локальный timestamp при добавлении; повторное отображение не меняет его время. Истории клиентов независимы и не содержат транспортных событий. Не висит на сцене, а создаётся `BattleRuntimeComposition` отдельно для каждого клиента.
 
 **`ClientDebugView`** — Unity `MonoBehaviour` debug-панели клиента. Связывает input fields, toggle и buttons с `ClientDebugController` и отображает endpoint, состояние соединения, последний request и события. На сцене висит на `ClientDebug` внутри каждого окна игрока.
 
 **`ServerStatusView`** — Unity `MonoBehaviour` панели сервера. Отображает число клиентов, состояние матча, текущего игрока, `StateVersion` и `TurnId`. На сцене висит на `Canvas/UI/ImageServerStatusPanel`.
 
-**`TransportLogView`** — Unity `MonoBehaviour` окна транспортного лога. Преобразует новые `TransportLogEntry` в ограниченный список строк. На сцене висит на `Canvas/UI/ImageTransportServerWindow`.
+**`TransportLogView`** — Unity `MonoBehaviour` общего окна транспортного лога. Преобразует новые `TransportLogEntry` в историю до 200 строк в порядке создания. Отображает сохранённый `LocalTimestamp`, статусы `SENT`, `RECEIVED`, `DROPPED`, `DUPLICATED`, направление, endpoint, тип сообщения и причину отбрасывания. На сцене висит на `Canvas/UI/ImageTransportServerWindow`; использует исходный транспортный журнал и не объединяет его с клиентскими событиями.
+
+**`DebugLogFormatting`** — общий статический helper слоя Presentation. Форматирует уже сохранённые локальные timestamps строго как `HH:mm:ss`, используя invariant culture, и собирает текст транспортной записи без изменения диагностических полей. Сам helper не получает текущее время и не влияет на сетевые часы.
+
+**`LogScrollView`** — переиспользуемый Unity-компонент слоя Presentation для трёх существующих областей логов. На обоих объектах `RecentEvents/ImageRecentEventsMask` и на `ImageTransportServerWindow/TransportLogLayountAndMask` настроены вертикальный `ScrollRect` и существующая маска. Существующий TMP-текст служит content с `ContentSizeFitter` по высоте; прежний `VerticalLayoutGroup` удалён с viewport, чтобы он не сбрасывал положение текста. Размеры viewport и окружающих панелей сохранены. При изменении текста компонент обновляет layout и прокручивает вниз, если пользователь уже был внизу; при просмотре старых записей сохраняет положение content. Возврат пользователя вниз возобновляет следование за новыми записями. Новых `Update`-циклов, корутин и фоновых задач нет; привязка нового клиента сбрасывает положение к его новой истории.
 
 ## Классы Runtime
 

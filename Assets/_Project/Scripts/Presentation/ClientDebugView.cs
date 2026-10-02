@@ -13,7 +13,7 @@ namespace Battleships.Presentation
         [SerializeField] private TMP_Text endpoint;
         [SerializeField] private TMP_Text connected;
         [SerializeField] private TMP_Text lastRequestId;
-        [SerializeField] private TMP_Text recentEvents;
+        [SerializeField] private LogScrollView recentEvents;
 
         [Header("Network settings")]
         [SerializeField] private TMP_InputField latency;
@@ -31,6 +31,7 @@ namespace Battleships.Presentation
         {
             Unbind();
             controller = debugController ?? throw new ArgumentNullException(nameof(debugController));
+            recentEvents.Render(controller.RecentEventsText, resetScroll: true);
             controller.Changed += Render;
             latency.onEndEdit.AddListener(OnLatencyChanged);
             jitter.onEndEdit.AddListener(OnJitterChanged);
@@ -64,7 +65,7 @@ namespace Battleships.Presentation
             endpoint.text = controller.EndpointText;
             SetStatusText(connected, controller.ConnectedText, controller.IsApplicationConnected);
             lastRequestId.text = controller.LastRequestIdText;
-            recentEvents.text = controller.RecentEventsText;
+            recentEvents.Render(controller.RecentEventsText);
             latency.SetTextWithoutNotify(Format(settings.LatencyMilliseconds));
             jitter.SetTextWithoutNotify(Format(settings.JitterMilliseconds));
             loss.SetTextWithoutNotify(Format(settings.LossRate * 100d));

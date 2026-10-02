@@ -5,7 +5,9 @@
         "Battleships.Protocol",
         "Battleships.Networking",
         "Battleships.Client",
-        "Battleships.Presentation"
+        "Battleships.Presentation",
+        "Unity.TextMeshPro",
+        "Unity.ugui"
     ],
     "includePlatforms": ["Editor"],
     "optionalUnityReferences": ["TestAssemblies"]

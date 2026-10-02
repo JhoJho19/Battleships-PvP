@@ -3884,7 +3884,7 @@ MonoBehaviour:
   endpoint: {fileID: 1426365347}
   connected: {fileID: 968766646}
   lastRequestId: {fileID: 1497916872}
-  recentEvents: {fileID: 1435801007}
+  recentEvents: {fileID: 1811377613}
   latency: {fileID: 2135588019}
   jitter: {fileID: 887871642}
   loss: {fileID: 2044359635}
@@ -4608,6 +4608,7 @@ GameObject:
   - component: {fileID: 578181968}
   - component: {fileID: 578181970}
   - component: {fileID: 578181969}
+  - component: {fileID: 578181971}
   m_Layer: 5
   m_Name: TextRecentEventEditableExample
   m_TagString: Untagged
@@ -4629,11 +4630,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 686322104}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 566.4446, y: 27.93}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 566.4446, y: 0}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &578181969
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4689,7 +4690,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -4734,6 +4735,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 578181967}
   m_CullTransparentMesh: 1
+--- !u!114 &578181971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578181967}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1 &579443632
 GameObject:
   m_ObjectHideFlags: 0
@@ -5348,7 +5363,8 @@ GameObject:
   - component: {fileID: 686322108}
   - component: {fileID: 686322107}
   - component: {fileID: 686322106}
-  - component: {fileID: 686322105}
+  - component: {fileID: 686322110}
+  - component: {fileID: 686322109}
   m_Layer: 5
   m_Name: ImageRecentEventsMask
   m_TagString: Untagged
@@ -5376,32 +5392,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0.22015381, y: -49.839996}
   m_SizeDelta: {x: 566.44, y: 134.67}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &686322105
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 686322103}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 0
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!114 &686322106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5453,6 +5443,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 686322103}
   m_CullTransparentMesh: 1
+--- !u!114 &686322109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 686322103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5903d1d892583844b50c6b8fe8cc69f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.LogScrollView
+  logText: {fileID: 578181969}
+  scrollRect: {fileID: 686322110}
+--- !u!114 &686322110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 686322103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa08ab6e0800fa44ae55d278d1423e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ScrollRect
+  m_Content: {fileID: 578181968}
+  m_Horizontal: 0
+  m_Vertical: 1
+  m_MovementType: 2
+  m_Elasticity: 0.1
+  m_Inertia: 1
+  m_DecelerationRate: 0.135
+  m_ScrollSensitivity: 25
+  m_Viewport: {fileID: 686322104}
+  m_HorizontalScrollbar: {fileID: 0}
+  m_VerticalScrollbar: {fileID: 0}
+  m_HorizontalScrollbarVisibility: 0
+  m_VerticalScrollbarVisibility: 0
+  m_HorizontalScrollbarSpacing: 0
+  m_VerticalScrollbarSpacing: 0
+  m_OnValueChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &686490543
 GameObject:
   m_ObjectHideFlags: 0
@@ -6038,7 +6072,8 @@ GameObject:
   - component: {fileID: 773296640}
   - component: {fileID: 773296639}
   - component: {fileID: 773296638}
-  - component: {fileID: 773296637}
+  - component: {fileID: 773296642}
+  - component: {fileID: 773296641}
   m_Layer: 5
   m_Name: TransportLogLayountAndMask
   m_TagString: Untagged
@@ -6066,32 +6101,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -17.321838}
   m_SizeDelta: {x: 825, y: 312.3337}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &773296637
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 773296635}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 1
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!114 &773296638
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6143,6 +6152,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 773296635}
   m_CullTransparentMesh: 1
+--- !u!114 &773296641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773296635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5903d1d892583844b50c6b8fe8cc69f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.LogScrollView
+  logText: {fileID: 2055183000}
+  scrollRect: {fileID: 773296642}
+--- !u!114 &773296642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773296635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa08ab6e0800fa44ae55d278d1423e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ScrollRect
+  m_Content: {fileID: 2055182999}
+  m_Horizontal: 0
+  m_Vertical: 1
+  m_MovementType: 2
+  m_Elasticity: 0.1
+  m_Inertia: 1
+  m_DecelerationRate: 0.135
+  m_ScrollSensitivity: 25
+  m_Viewport: {fileID: 773296636}
+  m_HorizontalScrollbar: {fileID: 0}
+  m_VerticalScrollbar: {fileID: 0}
+  m_HorizontalScrollbarVisibility: 0
+  m_VerticalScrollbarVisibility: 0
+  m_HorizontalScrollbarSpacing: 0
+  m_VerticalScrollbarSpacing: 0
+  m_OnValueChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &788625203
 GameObject:
   m_ObjectHideFlags: 0
@@ -8259,8 +8312,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebe3239fff28d524bb571d339522d3e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.TransportLogView
-  logText: {fileID: 2055183000}
-  maximumLines: 12
+  log: {fileID: 773296641}
+  maximumLines: 200
 --- !u!1 &1058202206
 GameObject:
   m_ObjectHideFlags: 0
@@ -11281,6 +11334,7 @@ GameObject:
   - component: {fileID: 1435801006}
   - component: {fileID: 1435801008}
   - component: {fileID: 1435801007}
+  - component: {fileID: 1435801009}
   m_Layer: 5
   m_Name: TextRecentEventEditableExample
   m_TagString: Untagged
@@ -11302,11 +11356,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1811377608}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 566.4446, y: 27.93}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 566.4446, y: 0}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1435801007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11362,7 +11416,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -11407,6 +11461,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1435801005}
   m_CullTransparentMesh: 1
+--- !u!114 &1435801009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1435801005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1 &1441053941
 GameObject:
   m_ObjectHideFlags: 0
@@ -12010,7 +12078,7 @@ MonoBehaviour:
   endpoint: {fileID: 1736193375}
   connected: {fileID: 208836783}
   lastRequestId: {fileID: 474874954}
-  recentEvents: {fileID: 578181969}
+  recentEvents: {fileID: 686322109}
   latency: {fileID: 1736327326}
   jitter: {fileID: 1796378412}
   loss: {fileID: 723924177}
@@ -14303,7 +14371,8 @@ GameObject:
   - component: {fileID: 1811377612}
   - component: {fileID: 1811377611}
   - component: {fileID: 1811377610}
-  - component: {fileID: 1811377609}
+  - component: {fileID: 1811377614}
+  - component: {fileID: 1811377613}
   m_Layer: 5
   m_Name: ImageRecentEventsMask
   m_TagString: Untagged
@@ -14331,32 +14400,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0.22015381, y: -49.839996}
   m_SizeDelta: {x: 566.44, y: 134.67}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1811377609
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1811377607}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 0
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!114 &1811377610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14408,6 +14451,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1811377607}
   m_CullTransparentMesh: 1
+--- !u!114 &1811377613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1811377607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5903d1d892583844b50c6b8fe8cc69f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Battleships.Presentation::Battleships.Presentation.LogScrollView
+  logText: {fileID: 1435801007}
+  scrollRect: {fileID: 1811377614}
+--- !u!114 &1811377614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1811377607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa08ab6e0800fa44ae55d278d1423e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ScrollRect
+  m_Content: {fileID: 1435801006}
+  m_Horizontal: 0
+  m_Vertical: 1
+  m_MovementType: 2
+  m_Elasticity: 0.1
+  m_Inertia: 1
+  m_DecelerationRate: 0.135
+  m_ScrollSensitivity: 25
+  m_Viewport: {fileID: 1811377608}
+  m_HorizontalScrollbar: {fileID: 0}
+  m_VerticalScrollbar: {fileID: 0}
+  m_HorizontalScrollbarVisibility: 0
+  m_VerticalScrollbarVisibility: 0
+  m_HorizontalScrollbarSpacing: 0
+  m_VerticalScrollbarSpacing: 0
+  m_OnValueChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1813019823
 GameObject:
   m_ObjectHideFlags: 0
@@ -16021,6 +16108,7 @@ GameObject:
   - component: {fileID: 2055182999}
   - component: {fileID: 2055183001}
   - component: {fileID: 2055183000}
+  - component: {fileID: 2055183002}
   m_Layer: 5
   m_Name: TextTransportLogExample
   m_TagString: Untagged
@@ -16042,11 +16130,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 773296636}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 590.7, y: 27.93}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 590.7, y: 0}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2055183000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16104,7 +16192,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -16149,6 +16237,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2055182998}
   m_CullTransparentMesh: 1
+--- !u!114 &2055183002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055182998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1 &2057643845
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Battleships.Client;
 using Battleships.Networking;
 
@@ -8,10 +9,11 @@ namespace Battleships.Presentation
 {
     public sealed class ClientDebugController : IDisposable
     {
-        private const int MaximumRecentEvents = 5;
+        private const int MaximumRecentEvents = 200;
         private readonly BattleClient client;
         private readonly ClientTransportEndpoint endpoint;
-        private readonly Queue<string> recentEvents = new Queue<string>();
+        private readonly Queue<(DateTimeOffset Timestamp, string Message)> recentEvents =
+            new Queue<(DateTimeOffset Timestamp, string Message)>();
         private bool disposed;
 
         public EndpointIdentity Endpoint => endpoint.Identity;
@@ -25,7 +27,8 @@ namespace Battleships.Presentation
         public string LastRequestIdText => string.IsNullOrWhiteSpace(client.LastRequestId)
             ? "-"
             : $"#{ShortId(client.LastRequestId)}";
-        public string RecentEventsText => string.Join("\n", recentEvents);
+        public string RecentEventsText => string.Join("\n", recentEvents.Select(entry =>
+            $"[{DebugLogFormatting.FormatTimestamp(entry.Timestamp)}] {entry.Message}"));
 
         public event Action Changed;
         public event Action<ClientEndpointId> RecreateRequested;
@@ -145,7 +148,7 @@ namespace Battleships.Presentation
         private void AddRecentEvent(string value)
         {
             if (recentEvents.Count == MaximumRecentEvents) recentEvents.Dequeue();
-            recentEvents.Enqueue(value);
+            recentEvents.Enqueue((DateTimeOffset.Now, value));
             Changed?.Invoke();
         }
 
