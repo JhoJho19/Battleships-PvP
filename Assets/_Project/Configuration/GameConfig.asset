@@ -15,9 +15,5 @@ MonoBehaviour:
   boardSize: 6
   shipLengths: 03000000020000000200000001000000
   turnDurationSeconds: 15
-  latencyMilliseconds: 0
-  jitterMilliseconds: 0
-  lossRate: 0
-  duplicateRate: 0
   heartbeatIntervalSeconds: 1
   heartbeatTimeoutSeconds: 5

@@ -23,6 +23,7 @@ namespace Battleships.Runtime
         [SerializeField] private ServerStatusView serverStatusView;
         [SerializeField] private TransportLogView transportLogView;
         [SerializeField] private Button restartSceneButton;
+        [SerializeField] private bool isDeterminateRandom = false;
         [SerializeField] private int placementSeed = 46;
 
         private InProcessTransport transport;
@@ -45,7 +46,7 @@ namespace Battleships.Runtime
             restartSceneButton.onClick.AddListener(RestartScene);
 
             transport = new InProcessTransport(new XmlMessageSerializer(ProtocolMessageTypes.All));
-            var server = new BattleServer(config.CreateGameRulesConfig(), new System.Random(placementSeed),
+            var server = new BattleServer(config.CreateGameRulesConfig(), CreatePlacementRandom(),
                 new SystemServerClock(), (long)(config.TurnDurationSeconds * 1000));
             adapter = new BattleServerTransportAdapter(server, transport);
             adapter.StatusChanged += RenderServerStatus;
@@ -63,6 +64,16 @@ namespace Battleships.Runtime
             lastTransportRealtime = Time.realtimeSinceStartupAsDouble;
             ProcessServerDeadlinesAsync(lifetimeCancellation.Token).Forget();
             RefreshTimersAsync(lifetimeCancellation.Token).Forget();
+        }
+
+        private System.Random CreatePlacementRandom()
+        {
+            if (isDeterminateRandom) return new System.Random(placementSeed);
+
+            var seedBytes = new byte[sizeof(int)];
+            using (var random = System.Security.Cryptography.RandomNumberGenerator.Create())
+                random.GetBytes(seedBytes);
+            return new System.Random(BitConverter.ToInt32(seedBytes, 0));
         }
 
         private ClientRuntime CreateClientRuntime(ClientEndpointId endpointId,

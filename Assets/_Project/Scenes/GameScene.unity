@@ -16580,7 +16580,7 @@ MonoBehaviour:
   serverStatusView: {fileID: 582204315}
   transportLogView: {fileID: 1057090291}
   restartSceneButton: {fileID: 1625588591}
-  placementSeed: 46
+  placementSeed: 1
 --- !u!4 &2087278006
 Transform:
   m_ObjectHideFlags: 0
