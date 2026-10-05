@@ -1,6 +1,8 @@
 PLAN.md и AI_Notes.md находятся в папке Assets \ _Project \ Docs
 
 ## 1. Как запустить:
+Добавить до начала работы в проект необходимо добавить Unitask через URL в Package manager: https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask
+
 Для запуска симуляции мультиплеерной игры запустите Play mode и нажмите кнопки Connect на двух дебаг панелях игроков, расположенных в нижних углах игрового экрана.
 
 ## 2. Архитектура:
